@@ -1,0 +1,219 @@
+import glob
+import serial
+import time
+import sounddevice as sd
+import wave
+import soundfile as sf
+from scipy.signal import butter, lfilter
+from pydub import AudioSegment, effects
+import os
+from datetime import datetime
+import numpy as np
+import librosa
+import tempfile
+import shutil
+
+
+import tensorflow as tf
+
+TFLITE_MODEL_PATH = r"C:\Users\HP\Desktop\EPaddy Updated\my_model.tflite"
+
+interpreter = tf.lite.Interpreter(model_path=TFLITE_MODEL_PATH)
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+
+SAMPLE_RATE = 44100  # Standard audio sample rate
+DURATION = 10  # Record for 10 seconds
+DEVICE = 1  # Use default mic
+CHANNELS = 1  # Mono audio
+
+lowpass_cutoff_freq = 2500  # Low-pass cutoff frequency in Hz; Highcut
+highpass_cutoff_freq = 93.75  # High-pass cutoff frequency in Hz; Lowcut
+filter_order = 4  # Filter order
+
+
+def tflite_predict(features):
+    features = features.astype(np.float32)
+    interpreter.set_tensor(input_details[0]['index'], features)
+    interpreter.invoke()
+    output_data = interpreter.get_tensor(output_details[0]['index'])
+    return output_data
+
+
+
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=-1, keepdims=True)
+
+def butter_bandpass(lowcut, highcut, fs, order=4):
+    nyquist_freq = 0.5 * fs
+    low = min(lowcut, highcut) / nyquist_freq
+    high = max(lowcut, highcut) / nyquist_freq
+    b, a = butter(order, [low, high], btype='band', analog=False)
+    return b, a
+
+def apply_butterworth_filter(data, lowcut, highcut, order, fs):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
+def normalize_waveform(waveform):
+    max_val = np.max(np.abs(waveform))
+    if max_val > 0:
+        return waveform / max_val
+    else:
+        return waveform
+
+
+def preprocess_audio(file_path, output_folder):
+    start_time = 3 * 60 * 1000  # 3 minutes
+    end_time = -1 * 60 * 1000  # -1 minute (from the end)
+    audio = AudioSegment.from_file(file_path, format="wav")
+    trimmed_audio = audio[start_time:end_time]
+    normalized_audio = effects.normalize(trimmed_audio)
+    temp_filepath = os.path.join(output_folder, "temp_" + os.path.basename(file_path))
+    normalized_audio.export(temp_filepath, format="wav")
+    sound_data, samplerate = sf.read(temp_filepath)
+    normalized_sound_data = normalize_waveform(sound_data)
+    filtered_sound = apply_butterworth_filter(normalized_sound_data, lowpass_cutoff_freq, highpass_cutoff_freq, filter_order, samplerate)
+    processed_filepath = os.path.join(output_folder, "processed_" + os.path.basename(file_path))
+    sf.write(processed_filepath, filtered_sound, samplerate)
+    os.remove(temp_filepath)
+    processed_audio = AudioSegment.from_file(processed_filepath, format="wav")
+    slice_duration = 10 * 1000  # 10 seconds in milliseconds
+    slice_filepaths = []
+    for i in range(10):
+        start_slice = i * slice_duration
+        end_slice = start_slice + slice_duration
+        slice_audio = processed_audio[start_slice:end_slice]
+        slice_output_path = os.path.join(output_folder, f"slice_{i+1}_" + os.path.basename(file_path))
+        slice_audio.export(slice_output_path, format="wav")
+        slice_filepaths.append(slice_output_path)
+    return slice_filepaths
+
+def extract_features(file_path):
+    sound_data, samplerate = sf.read(file_path)
+    target_samplerate = 8000  # Lower sample rate to reduce memory usage
+    if samplerate != target_samplerate:
+        sound_data = librosa.resample(sound_data, orig_sr=samplerate, target_sr=target_samplerate)
+        samplerate = target_samplerate
+    normalized_sound_data = normalize_waveform(sound_data)
+    filtered_sound_bandpass = apply_butterworth_filter(normalized_sound_data, lowpass_cutoff_freq, highpass_cutoff_freq, filter_order, samplerate)
+    spectrogram = librosa.feature.melspectrogram(y=filtered_sound_bandpass, sr=samplerate, n_fft=512, hop_length=256, n_mels=128)
+    spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
+    spectrogram = librosa.util.fix_length(spectrogram, size=128, axis=1)
+    spectrogram = np.expand_dims(spectrogram, axis=-1)
+    spectrogram = np.expand_dims(spectrogram, axis=0)
+    return spectrogram
+
+
+def classify(folder):
+    audio_folder = os.path.join(os.getcwd(),folder)
+    wav_files = glob.glob(os.path.join(audio_folder, '*.wav'))
+
+    if not wav_files:
+        return {'error': 'No WAV files found in the specified folder'}, 400
+
+    latest_wav = max(wav_files, key=os.path.getctime)
+    results = []
+    audio = AudioSegment.from_file(latest_wav, format="wav")
+    duration_minutes = len(audio) / (60 * 1000)
+
+    if duration_minutes >= 10:
+        # Use a temporary directory to store slices and temp WAV
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_wav_path = shutil.copy(latest_wav, temp_dir)
+            slice_filepaths = preprocess_audio(temp_wav_path, temp_dir)
+
+            for i, slice_filepath in enumerate(slice_filepaths):
+                features = extract_features(slice_filepath)
+                prediction = tflite_predict(features)
+                prediction = softmax(prediction)
+                r_dominica, t_castaneum, s_oryzae, no_insects = prediction[0]
+
+                if no_insects > max(r_dominica, t_castaneum, s_oryzae):
+                    predicted_species = 'No_insects'
+                elif r_dominica > max(t_castaneum, s_oryzae, no_insects):
+                    predicted_species = 'R_dominica'
+                elif t_castaneum > max(r_dominica, s_oryzae, no_insects):
+                    predicted_species = 'T_castaneum'
+                else:
+                    predicted_species = 'S_oryzae'
+
+                slice_filename = f"slice_{i + 1}_{os.path.basename(latest_wav)}"
+                prediction_dict = {
+                    'r_dominica': round(float(r_dominica) * 100, 1),
+                    's_oryzae': round(float(s_oryzae) * 100, 1),
+                    't_castaneum': round(float(t_castaneum) * 100, 1),
+                    'no_insects': round(float(no_insects) * 100, 1),
+                    'predicted_species': predicted_species,
+                    'slice_filepath': slice_filepath,
+                    'slice_number': i + 1
+                }
+                results.append({
+                    'filename': slice_filename,
+                    'result': prediction_dict,
+                })
+        # temp_dir and all its contents are deleted here
+    else:
+        features = extract_features(latest_wav)
+        prediction = tflite_predict(features)
+        prediction = softmax(prediction)
+        r_dominica, t_castaneum, s_oryzae, no_insects = prediction[0]
+
+        if no_insects > max(r_dominica, t_castaneum, s_oryzae):
+            predicted_species = 'No_insects'
+        elif r_dominica > max(t_castaneum, s_oryzae, no_insects):
+            predicted_species = 'R_dominica'
+        elif t_castaneum > max(r_dominica, s_oryzae, no_insects):
+            predicted_species = 'T_castaneum'
+        else:
+            predicted_species = 'S_oryzae'
+
+        prediction_dict = {
+            'r_dominica': round(r_dominica * 100, 1),
+            's_oryzae': round(s_oryzae * 100, 1),
+            't_castaneum': round(t_castaneum * 100, 1),
+            'no_insects': round(no_insects * 100, 1),
+            'predicted_species': predicted_species,
+            'slice_filepath': latest_wav,
+            'slice_number': 1
+        }
+        filename = os.path.basename(latest_wav)
+        results.append({
+            'filename': filename,
+            'result': prediction_dict,
+        })
+
+    all_results = [item['result']['predicted_species'] for item in results]
+    print(all_results)
+    tc = so = rd = ni = 0
+
+    for result in all_results:
+        if result == 'T_castaneum':
+            tc += 1
+        elif result == 'S_oryzae':
+            so += 1
+        elif result == 'R_dominica':
+            rd += 1
+        elif result == 'no_insects':
+            ni += 1
+
+    counts = {
+        't_castaneum': tc,
+        'S_oryzae': so,
+        'r_dominica': rd,
+        'no_insects': ni
+    }
+    max_label = max(counts, key=counts.get)
+    max_value = counts[max_label]
+
+    message_text = f"The highest count is +{max_value} from {max_label}"
+
+
+
+    return message_text
+
+
+
