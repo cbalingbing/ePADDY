@@ -1,0 +1,7 @@
+Per-class metrics:
+NoInsects: Precision=0.176, Recall=0.235, F1=0.202, AP=0.141
+RD: Precision=0.535, Recall=0.920, F1=0.676, AP=0.533
+SO: Precision=0.000, Recall=0.000, F1=0.000, AP=0.122
+TC: Precision=0.000, Recall=0.000, F1=0.000, AP=0.182
+
+Mean Average Precision (mAP): 0.244

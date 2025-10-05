@@ -1,0 +1,10 @@
+Flask>=2.2
+numpy==1.26.4
+librosa>=0.10
+matplotlib>=3.6
+keras>=2.11
+tensorflow>=2.11  # required for keras backend
+sounddevice>=0.4
+SoundFile>=0.12
+scipy>=1.10
+pydub>=0.25

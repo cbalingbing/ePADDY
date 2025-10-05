@@ -1,0 +1,59 @@
+import detection
+import time
+from datetime import datetime
+import serial
+
+# Path to your audio folder
+folder_path = r"C:\Users\HP\Desktop\EPaddy Updated\retrieve_audio"
+
+# Serial config
+serial_port = '/dev/ttyAMA0'
+baud_rate = 9600
+
+# List of recipient phone numbers
+phone_numbers = ["+6XXXXXXXXXX", "+6YYYYYYYYYY"]  # Replace with actual numbers
+
+# Function to send AT command
+def send_command(ser, command, delay=1):
+    """Helper to send command and print the response"""
+    print(f">>> {command}")
+    ser.write((command + '\r').encode())
+    time.sleep(delay)
+    response = ser.read_all().decode(errors='ignore')
+    print(response)
+    return response
+
+# Function to send message to all recipients
+def send_txt_msg():
+    try:
+        # Run your classifier
+        message_text = detection.classify(folder_path)
+
+        # Send to each recipient
+        for phone_number in phone_numbers:
+            print(f"Sending to: {phone_number}")
+            # Open serial port each time
+            ser = serial.Serial(serial_port, baud_rate, timeout=2)
+            time.sleep(2)
+
+            send_command(ser, 'AT')
+            send_command(ser, 'AT+CMGF=1')
+            send_command(ser, f'AT+CMGS="{phone_number}"')
+            time.sleep(1)
+            ser.write(message_text.encode())
+            ser.write(b"\x1A")  # Ctrl+Z
+            time.sleep(3)
+            ser.close()
+
+        print("Messages sent successfully.")
+
+    except Exception as e:
+        print(f"[{datetime.now()}] Error occurred: {e}")
+
+# Run every hour
+if __name__ == "__main__":
+    while True:
+        print(f"[{datetime.now()}] Running message sender...")
+        send_txt_msg()
+        print(f"[{datetime.now()}] Waiting 1 hour...\n")
+        time.sleep(3600)  # Wait for 1 hour
