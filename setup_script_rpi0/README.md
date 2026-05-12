@@ -13,7 +13,6 @@ This is the hardware components required for the RPI Zero for capturing insect s
 |-----------|---------|
 | Board | Raspberry Pi Zero / Zero W / Zero 2 W |
 | OS | Raspberry Pi OS Lite (Debian Bookworm or later) |
-| Audio HAT | Google Voice HAT |
 | Storage | MicroSD card (16GB minimum, 32GB recommended) with rw 100mb/s |
 | Power | 5V micro USB power supply |
 | Internet | WiFi (Zero W / Zero 2 W) or USB OTG adapter |
@@ -199,7 +198,7 @@ pip3 install --upgrade adafruit-python-shell
 
 ```bash
 wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/master/raspi-blinka.py
-sudo .venv/bin/python3 raspi-blinka.py
+sudo -E env PATH=$PATH .venv/bin/python3 raspi-blinka.py
 ```
 
 ### Step 6 — Edit Boot Config
@@ -322,7 +321,6 @@ sudo systemctl status epaddy-resume
 
 ## Python Packages (requirements.txt)
 
-<!-- TODO: Add or remove packages as your project grows -->
 
 ```
 adafruit-circuitpython-ahtx0
@@ -332,8 +330,6 @@ adafruit-circuitpython-busdevice
 ---
 
 ## Troubleshooting
-
-<!-- TODO: Add issues you encounter during setup -->
 
 | Issue | Fix |
 |-------|-----|
@@ -360,9 +356,5 @@ adafruit-circuitpython-busdevice
 - Option B (two-part) is recommended — it handles Blinka's reboot automatically
 - The `epaddy-resume` service is self-cleaning — it removes itself after Part 2 completes
 
----
 
-## License
 
-<!-- TODO: Choose a license or remove this section -->
-MIT License
