@@ -1,0 +1,2 @@
+adafruit-circuitpython-ahtx0
+adafruit-circuitpython-busdevice
