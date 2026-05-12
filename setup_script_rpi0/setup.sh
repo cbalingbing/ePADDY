@@ -158,7 +158,7 @@ echo "Active venv: $VIRTUAL_ENV"
 echo ""
 echo "[5/8] Installing Python packages..."
 
-# TODO: Add or remove pip install lines as needed
+#Add or remove pip install lines as needed
 pip install -r "$SCRIPTS_DIR/requirements.txt" || { echo "ERROR: pip install failed."; echo "Fix: Check that requirements.txt exists in $SCRIPTS_DIR and packages are spelled correctly."; exit 1; }
 pip3 install --upgrade adafruit-python-shell || { echo "ERROR: Failed to upgrade adafruit-python-shell."; exit 1; }
 echo "Python packages installed."
