@@ -25,7 +25,7 @@ This is the hardware components required for the RPI Zero for capturing insect s
 ## File Structure
 
 ```
-~/Desktop/Epaddy/
+~/Desktop/Epaddy/setup_script_rpi0
 ├── bootstrap.sh              # Run this FIRST — creates directory and downloads scripts
 ├── setup.sh                  # Option A — Single script (manual reboot between Blinka and config)
 ├── setup_part1.sh            # Option B — Part 1: Blinka setup + registers auto-resume
