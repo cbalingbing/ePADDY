@@ -173,8 +173,7 @@ wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/m
     || { echo "ERROR: wget failed. Check your internet connection."; echo "Fix: Try manually downloading raspi-blinka.py from Adafruit's GitHub."; exit 1; }
 
 echo "Running Blinka installer..."
-sudo "$VENV_PATH/bin/python3" "$SCRIPTS_DIR/raspi-blinka.py" || { echo "ERROR: raspi-blinka.py failed."; echo "Fix: Check that I2C and SPI are enabled, and that your Pi is supported."; exit 1; }
-
+sudo -E env PATH=$PATH "$VENV_PATH/bin/python3" "$SCRIPTS_DIR/raspi-blinka.py" || { echo "ERROR: raspi-blinka.py failed."; echo "Fix: Check that I2C and SPI are enabled, and that your Pi is supported."; exit 1; }
 # =============================================================
 # STEP 7 — Edit Boot Config
 # =============================================================
