@@ -19,6 +19,7 @@ cd "$SCRIPTS_DIR"
 
 echo "Downloading setup scripts into $SCRIPTS_DIR ..."
 
+wget -q "$REPO_RAW_URL/bootstrap.sh"        -O bootstrap.sh
 wget -q "$REPO_RAW_URL/setup.sh"              -O setup.sh
 wget -q "$REPO_RAW_URL/setup_part1.sh"        -O setup_part1.sh
 wget -q "$REPO_RAW_URL/setup_part2.sh"        -O setup_part2.sh
