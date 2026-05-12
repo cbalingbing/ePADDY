@@ -24,6 +24,12 @@ wget -q "$REPO_RAW_URL/setup.sh"          -O setup.sh
 wget -q "$REPO_RAW_URL/setup_part1.sh"    -O setup_part1.sh
 wget -q "$REPO_RAW_URL/setup_part2.sh"    -O setup_part2.sh
 wget -q "$REPO_RAW_URL/requirements.txt"  -O requirements.txt
+wget -q "$REPO_RAW_URL/edit_boot_config.sh"  -O edit_boot_config.sh
+wget -q "$REPO_RAW_URL/sound_card_setup.sh"  -O sound_card_setup.sh
+wget -q "$REPO_RAW_URL/auto_chmod.sh"  -O auto_chmod.sh
+wget -q "$REPO_RAW_URL/blinka_test.py"  -O blinka_test.py
+wget -q "$REPO_RAW_URL/setup_venv.sh"  -O setup_venv.sh
+wget -q "$REPO_RAW_URL/README.md"  -O README.md
 
 echo "Making scripts executable..."
 chmod +x setup.sh setup_part1.sh setup_part2.sh
