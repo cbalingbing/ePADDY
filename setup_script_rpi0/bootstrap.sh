@@ -8,7 +8,7 @@ set -e
 # Creates the project directory and downloads all setup scripts.
 # =============================================================
 
-TARGET_DIR="/home/$(whoami)/Desktop/Epaddy"
+TARGET_DIR="/home/$(whoami)/Desktop/Epaddy/scripts"
 
 #Base Path of script
 REPO_RAW_URL="https://raw.githubusercontent.com/cbalingbing/ePADDY/main/setup_script_rpi0"
