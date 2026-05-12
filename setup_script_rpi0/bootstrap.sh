@@ -10,8 +10,7 @@ set -e
 
 TARGET_DIR="/home/$(whoami)/Desktop/Epaddy"
 
-# TODO: Replace with your actual GitHub raw URL base path
-# Example: https://raw.githubusercontent.com/yourusername/epaddy/main/setup_script
+#Base Path of script
 REPO_RAW_URL="https://raw.githubusercontent.com/cbalingbing/ePADDY/main/setup_script_rpi0"
 
 echo "Creating project directory: $TARGET_DIR"
@@ -20,7 +19,7 @@ cd "$TARGET_DIR"
 
 echo "Downloading setup scripts..."
 
-# TODO: Add or remove files as needed
+
 wget -q "$REPO_RAW_URL/setup.sh"          -O setup.sh
 wget -q "$REPO_RAW_URL/setup_part1.sh"    -O setup_part1.sh
 wget -q "$REPO_RAW_URL/setup_part2.sh"    -O setup_part2.sh
