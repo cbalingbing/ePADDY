@@ -12,7 +12,7 @@ TARGET_DIR="/home/$(whoami)/Desktop/Epaddy"
 
 # TODO: Replace with your actual GitHub raw URL base path
 # Example: https://raw.githubusercontent.com/yourusername/epaddy/main/setup_script
-REPO_RAW_URL="https://raw.githubusercontent.com/yourusername/epaddy/main/setup_script_rpi0"
+REPO_RAW_URL="https://raw.githubusercontent.com/cbalingbing/ePADDY/main/setup_script_rpi0"
 
 echo "Creating project directory: $TARGET_DIR"
 mkdir -p "$TARGET_DIR"
