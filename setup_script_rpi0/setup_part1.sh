@@ -184,8 +184,7 @@ wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/m
 
 echo "Running Blinka installer..."
 echo "NOTE: Blinka will request a reboot. Part 2 will auto-resume after reboot."
-sudo "$VENV_PATH/bin/python3" "$SCRIPTS_DIR/raspi-blinka.py" || { echo "ERROR: raspi-blinka.py failed."; echo "Fix: Check I2C and SPI are enabled and your Pi is supported."; exit 1; }
-
+sudo -E env PATH=$PATH "$VENV_PATH/bin/python3" "$SCRIPTS_DIR/raspi-blinka.py" || { echo "ERROR: raspi-blinka.py failed."; echo "Fix: Check I2C and SPI are enabled and your Pi is supported."; exit 1; }
 # =============================================================
 # SET UP AUTO-RESUME FOR PART 2
 # =============================================================
