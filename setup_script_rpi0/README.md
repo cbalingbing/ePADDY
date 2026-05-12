@@ -86,7 +86,7 @@ bash ~/bootstrap.sh
 
 **Alternative — Git clone:**
 ```bash
-git clone https://github.com/yourusername/epaddy.git ~/Desktop/Epaddy
+git clone https://github.com/cbalingbing/ePADDY.git ~/Desktop/Epaddy
 ```
 
 **Alternative — SCP from your PC:**
