@@ -14,7 +14,7 @@ SCRIPTS_DIR="$TARGET_DIR/scripts"
 REPO_RAW_URL="https://raw.githubusercontent.com/cbalingbing/ePADDY/main/setup_script_rpi0"
 
 echo "Creating project directories..."
-mkdir -p "$SCRIPTS_DIR"
+sudo mkdir -p "$SCRIPTS_DIR"
 cd "$SCRIPTS_DIR"
 
 echo "Downloading setup scripts into $SCRIPTS_DIR ..."
