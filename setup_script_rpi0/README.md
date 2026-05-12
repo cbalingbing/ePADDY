@@ -74,7 +74,7 @@ Run this single command on the Pi to create the project folder and pull all setu
 
 <!-- TODO: Replace with your actual GitHub raw URL once repo is set up -->
 ```bash
-wget -qO- https://raw.githubusercontent.com/cbalingbing/ePADDY/main/APP/setup_script/bootstrap.sh | bash
+wget -qO- https://raw.githubusercontent.com/cbalingbing/ePADDY/main/APP/setup_script_rpi0/bootstrap.sh | bash
 ```
 
 Or if you already have `bootstrap.sh` copied to the Pi:
