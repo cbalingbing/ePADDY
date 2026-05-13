@@ -35,7 +35,7 @@ wget -q "$REPO_RAW_URL/config.txt"        -O config.txt
 wget -q "$REPO_RAW_URL/README.md"             -O README.md
 
 echo "Making scripts executable..."
-chmod +x setup.sh setup_part1.sh setup_part2.sh auto_chmod.sh setup_venv.sh edit_boot_config.sh sound_card_setup.sh
+chmod +x setup.sh setup_part1.sh setup_part2.sh auto_chmod.sh setup_venv.sh edit_boot_config.sh sound_card_setup.sh new_recording_script.sh
 
 echo ""
 echo "============================================="
