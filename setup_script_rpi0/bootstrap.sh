@@ -29,6 +29,9 @@ wget -q "$REPO_RAW_URL/sound_card_setup.sh"   -O sound_card_setup.sh
 wget -q "$REPO_RAW_URL/auto_chmod.sh"         -O auto_chmod.sh
 wget -q "$REPO_RAW_URL/setup_venv.sh"         -O setup_venv.sh
 wget -q "$REPO_RAW_URL/blinka_test.py"        -O blinka_test.py
+wget -q "$REPO_RAW_URL/new_recording_script.sh"        -O new_recording_script.sh
+wget -q "$REPO_RAW_URL/recordv2.py"        -O recordv2.py
+wget -q "$REPO_RAW_URL/config.txt"        -O config.txt
 wget -q "$REPO_RAW_URL/README.md"             -O README.md
 
 echo "Making scripts executable..."
