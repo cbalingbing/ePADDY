@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+env/
+.venv/
+
+# Markdown docs
+*.md
+*.MD
+
+# Database files
+*.db
+APPV2/sqlite/
+
+# Large model files
+*.h5
+*.pkl
+*.pt
+*.pth
+*.onnx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Audio recordings and temp files
+recordings/
+APPV2/recordings/
+*.wav
+!APPV2/static/resources/insect_sounds/*.wav
+
+# Generated output folders
+APPV2/results/
+APPV2/static/spec_images/
+APPV2/static/graphs/
+APPV2/python/predictions.csv
+APPV2/logs/
+
+# Machine-specific config (contains local paths, node name, device name, Samba server)
+APPV2/config.ini
+
+# RPi hardware config (machine-specific boot/device settings)
+setup_script_rpi0/config.txt
+
+# Retrieve audio folder
+retrieve_audio/
