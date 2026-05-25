@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePADDY | Predict</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/style.css') }}">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="nav-home" href="/">
+                <img src="{{ url_for('static', filename='Acoustic sensor.png') }}"
+                     alt="ePADDY Logo" class="nav-logo">
+                ePADDY
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-button collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/predict">Predict</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about-us">About us</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toggle Buttons -->
+    <div class="text-center mt-4">
+        <div class="toggle-wrapper">
+            <button id="btnUpload" class="toggle-btn active" onclick="switchTab('upload')">UPLOAD</button>
+            <button id="btnRecord" class="toggle-btn inactive" onclick="switchTab('record')">RECORD</button>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <section id="uploadSection" class="py-5">
+        <div class="container">
+            <h1 class="predict-heading">Upload your .wav files here</h1>
+            <p class="predict-subheading">Select one or more .wav audio files to run insect detection.</p>
+
+            <form id="uploadForm" enctype="multipart/form-data">
+                <label for="audioFile" class="upload-icon-wrapper">
+                    <img src="{{ url_for('static', filename='upload-icon.svg') }}"
+                         class="upload-icon" alt="Upload">
+                    <p class="mt-2 text-muted">Click to select files</p>
+                </label>
+                <input type="file" id="audioFile" name="file" accept=".wav" multiple class="d-none">
+
+                <!-- Selected file list -->
+                <div id="fileList" class="mt-3 d-none">
+                    <p class="text-muted mb-1" id="fileListLabel"></p>
+                    <ul id="fileListItems" class="list-unstyled ms-2"></ul>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button type="submit" id="submitBtn" class="btn btn-success px-4">Run Prediction</button>
+                    <div id="uploadLoader" class="d-none mt-2 text-muted">
+                        <div class="spinner-border spinner-border-sm text-success me-2" role="status"></div>
+                        Uploading files...
+                    </div>
+                </div>
+            </form>
+
+            <!-- Error Area -->
+            <div id="errorArea" class="mt-4 d-none">
+                <div id="errorMsg"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Record Section (hidden by default) -->
+    <section id="recordSection" class="py-5 d-none">
+        <div class="container">
+            <h1 class="predict-heading">Record your audio now</h1>
+            <p class="predict-subheading">Records 60 seconds from your microphone for insect detection.</p>
+
+            <div class="text-center">
+                <div class="upload-icon-wrapper" id="micIconWrapper">
+                    <img src="{{ url_for('static', filename='mic-fill.svg') }}"
+                         class="upload-icon" alt="Microphone">
+                </div>
+
+                <p id="recordStatus" class="text-muted mt-3 mb-3">Press Start to begin recording.</p>
+
+                <div id="recordTimer" class="d-none mb-2">
+                    <span id="timerDisplay" style="font-size: 3rem; font-weight: 900; color: #2D772D;">60</span>
+                    <span class="text-muted"> s remaining</span>
+                </div>
+
+                <div id="recordProgress" class="d-none mb-4" style="max-width: 400px; margin: 0 auto;">
+                    <div class="progress" style="height: 8px;">
+                        <div id="progressBar" class="progress-bar bg-success" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <button id="startRecordBtn" class="btn btn-success px-5" onclick="startRecording()">
+                    Start Recording
+                </button>
+
+                <div id="recordLoader" class="d-none mt-3 text-muted">
+                    <div class="spinner-border spinner-border-sm text-success me-2" role="status"></div>
+                    Processing audio...
+                </div>
+            </div>
+
+            <div id="recordErrorArea" class="mt-4 d-none">
+                <div id="recordErrorMsg"></div>
+            </div>
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='assets/js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        // Tab switcher
+        function switchTab(tab) {
+            const uploadSection = document.getElementById('uploadSection');
+            const recordSection = document.getElementById('recordSection');
+            const btnUpload = document.getElementById('btnUpload');
+            const btnRecord = document.getElementById('btnRecord');
+
+            if (tab === 'upload') {
+                uploadSection.classList.remove('d-none');
+                recordSection.classList.add('d-none');
+                btnUpload.classList.replace('inactive', 'active');
+                btnRecord.classList.replace('active', 'inactive');
+            } else {
+                recordSection.classList.remove('d-none');
+                uploadSection.classList.add('d-none');
+                btnRecord.classList.replace('inactive', 'active');
+                btnUpload.classList.replace('active', 'inactive');
+            }
+        }
+
+        // Validate file on select + populate file list
+        document.getElementById('audioFile').addEventListener('change', function () {
+            const files = Array.from(this.files);
+            const invalid = files.filter(f => !f.name.toLowerCase().endsWith('.wav'));
+
+            if (invalid.length > 0) {
+                this.value = '';
+                document.getElementById('fileList').classList.add('d-none');
+                document.getElementById('errorMsg').textContent = `Invalid file(s): ${invalid.map(f => f.name).join(', ')}. Only .wav allowed.`;
+                document.getElementById('errorArea').classList.remove('d-none');
+                return;
+            }
+
+            document.getElementById('errorArea').classList.add('d-none');
+
+            // Populate file list
+            const label = document.getElementById('fileListLabel');
+            const list  = document.getElementById('fileListItems');
+            label.textContent = `Selected file${files.length > 1 ? 's' : ''} (${files.length}):`;
+            list.innerHTML = files.map(f => `<li class="text-muted">&#8226; ${f.name}</li>`).join('');
+            document.getElementById('fileList').classList.remove('d-none');
+        });
+
+        // Form submit → redirect to results
+        document.getElementById('uploadForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fileInput  = document.getElementById('audioFile');
+            const submitBtn  = document.getElementById('submitBtn');
+            const loader     = document.getElementById('uploadLoader');
+
+            // Check if no file selected
+            if (!fileInput.files || fileInput.files.length === 0) {
+                document.getElementById('errorMsg').textContent = 'Please select at least one .wav file.';
+                document.getElementById('errorArea').classList.remove('d-none');
+                return;
+            }
+
+            const formData = new FormData();
+            Array.from(fileInput.files).forEach(f => formData.append('file', f));
+
+            document.getElementById('errorArea').classList.add('d-none');
+
+            // Show loader, hide button
+            submitBtn.classList.add('d-none');
+            loader.classList.remove('d-none');
+
+            try {
+                const response = await fetch('/predict-uploads', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.error) {
+                    submitBtn.classList.remove('d-none');
+                    loader.classList.add('d-none');
+                    document.getElementById('errorMsg').textContent = data.error;
+                    document.getElementById('errorArea').classList.remove('d-none');
+                    return;
+                }
+                window.location.href = '/results';
+            } catch (err) {
+                submitBtn.classList.remove('d-none');
+                loader.classList.add('d-none');
+                document.getElementById('errorMsg').textContent = 'An unexpected error occurred.';
+                document.getElementById('errorArea').classList.remove('d-none');
+            }
+        });
+    </script>
+    <script>
+        const RECORD_SECONDS = 60;
+
+        function writeString(view, offset, str) {
+            for (let i = 0; i < str.length; i++)
+                view.setUint8(offset + i, str.charCodeAt(i));
+        }
+
+        function encodeWAV(chunks, sampleRate) {
+            const length = chunks.reduce((a, c) => a + c.length, 0);
+            const pcm = new Float32Array(length);
+            let offset = 0;
+            chunks.forEach(c => { pcm.set(c, offset); offset += c.length; });
+
+            const int16 = new Int16Array(pcm.length);
+            for (let i = 0; i < pcm.length; i++)
+                int16[i] = Math.max(-32768, Math.min(32767, pcm[i] * 32768));
+
+            const buffer = new ArrayBuffer(44 + int16.byteLength);
+            const view = new DataView(buffer);
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + int16.byteLength, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, int16.byteLength, true);
+            new Uint8Array(buffer, 44).set(new Uint8Array(int16.buffer));
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        async function startRecording() {
+            const btn       = document.getElementById('startRecordBtn');
+            const status    = document.getElementById('recordStatus');
+            const timer     = document.getElementById('recordTimer');
+            const timerDisp = document.getElementById('timerDisplay');
+            const progress  = document.getElementById('recordProgress');
+            const bar       = document.getElementById('progressBar');
+            const loader    = document.getElementById('recordLoader');
+            const errArea   = document.getElementById('recordErrorArea');
+            const errMsg    = document.getElementById('recordErrorMsg');
+
+            errArea.classList.add('d-none');
+            status.textContent = 'Requesting microphone permission...';
+            btn.disabled = true;
+
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            } catch (err) {
+                status.textContent = 'Press Start to begin recording.';
+                btn.disabled = false;
+                errMsg.textContent = 'Microphone permission denied. Please allow access and try again.';
+                errArea.classList.remove('d-none');
+                return;
+            }
+
+            const sampleRate = 8000;
+            const audioCtx   = new AudioContext({ sampleRate });
+            const source     = audioCtx.createMediaStreamSource(stream);
+            const processor  = audioCtx.createScriptProcessor(4096, 1, 1);
+            const chunks     = [];
+
+            processor.onaudioprocess = e => {
+                chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+            };
+            source.connect(processor);
+            processor.connect(audioCtx.destination);
+
+            status.textContent = 'Recording...';
+            timer.classList.remove('d-none');
+            progress.classList.remove('d-none');
+            btn.classList.add('d-none');
+
+            let remaining = RECORD_SECONDS;
+            timerDisp.textContent = remaining;
+            bar.style.width = '0%';
+
+            const interval = setInterval(() => {
+                remaining--;
+                timerDisp.textContent = remaining;
+                bar.style.width = ((RECORD_SECONDS - remaining) / RECORD_SECONDS * 100) + '%';
+                if (remaining <= 0) clearInterval(interval);
+            }, 1000);
+
+            setTimeout(async () => {
+                processor.disconnect();
+                source.disconnect();
+                stream.getTracks().forEach(t => t.stop());
+                await audioCtx.close();
+
+                timer.classList.add('d-none');
+                progress.classList.add('d-none');
+                status.textContent = 'Encoding and submitting...';
+                loader.classList.remove('d-none');
+
+                const wavBlob  = encodeWAV(chunks, sampleRate);
+                const formData = new FormData();
+                formData.append('file', wavBlob, 'recording.wav');
+
+                try {
+                    const response = await fetch('/predict-uploads', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (data.error) {
+                        loader.classList.add('d-none');
+                        btn.classList.remove('d-none');
+                        btn.disabled = false;
+                        status.textContent = 'Press Start to begin recording.';
+                        errMsg.textContent = data.error;
+                        errArea.classList.remove('d-none');
+                        return;
+                    }
+                    window.location.href = '/results';
+                } catch (err) {
+                    loader.classList.add('d-none');
+                    btn.classList.remove('d-none');
+                    btn.disabled = false;
+                    status.textContent = 'Press Start to begin recording.';
+                    errMsg.textContent = 'An unexpected error occurred.';
+                    errArea.classList.remove('d-none');
+                }
+            }, RECORD_SECONDS * 1000);
+        }
+    </script>
+</body>
+</html>

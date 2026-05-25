@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePADDY | Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/style.css') }}">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="nav-home" href="/">
+                <img src="{{ url_for('static', filename='Acoustic sensor.png') }}"
+                     alt="ePADDY Logo" class="nav-logo">
+                ePADDY
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-button collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/predict">Predict</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about-us">About us</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Hero Section ───────────────────────────────────────────────────── -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-5">
+                    <h1 class="hero-title">ePADDY</h1>
+                    <!-- Desktop: button sits under the title (original) -->
+                    <a href="/predict" class="btn btn-success hero-btn d-none d-lg-inline-block">Detect Now</a>
+                </div>
+                <div class="col-lg-7">
+                    <p class="hero-desc">
+                        <strong>Enhanced Pest Acoustic Detection Device for Rice</strong> (ePADDY) a
+                        state-of-the-art tool designed to aid farmers and end-users in
+                        detecting insect pests in stored rice through sophisticated sound analysis.
+                        By leveraging advanced acoustic detection technology, ePADDY offers a
+                        sustainable and efficient solution for monitoring and managing insect
+                        pests, ensuring better quality and protection of stored products.
+                    </p>
+                    <!-- Mobile: button sits after the paragraph, centered -->
+                    <div class="text-center mt-4 d-lg-none">
+                        <a href="/predict" class="btn btn-success hero-btn">Detect Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Insects Section ────────────────────────────────────────────────── -->
+    <section class="insect-section">
+        <div class="row g-0 m-0">
+
+            <!-- Left: insect text panel (green) -->
+            <div class="col-lg-8 insect-left">
+                <div class="insect-content">
+                <h2 class="insect-heading">INSECTS</h2>
+                <div class="insect-list">
+
+                    <!-- INSECT 1: Sitophilus oryzae — edit name/desc here -->
+                    <div class="insect-item"
+                         data-sound-src="{{ url_for('static', filename='resources/insect_sounds/S_oryzae.wav') }}"
+                         data-name="Sitophilus oryzae"
+                         data-desc="The rice weevil (Sitophilus oryzae) is a stored product pest which attacks seeds of several crops, including wheat, rice, and maize."
+                         data-images='{{ [
+                             url_for("static", filename="resources/gallery/Sitophilus oryzae 1.png"),
+                             url_for("static", filename="resources/gallery/Sitophilus oryzae 2.png"),
+                             url_for("static", filename="resources/gallery/Sitophilus oryzae 3.jpg")
+                         ] | tojson }}'>
+                        <div class="insect-item-name">S_Oryzae</div>
+                        <div class="insect-item-desc">
+                            The rice weevil (Sitophilus oryzae) is a stored product pest which
+                            attacks seeds of several crops, including wheat, rice, and maize.
+                        </div>
+                    </div>
+
+                    <!-- INSECT 2: Rhyzopertha dominica — edit name/desc here -->
+                    <div class="insect-item"
+                         data-sound-src="{{ url_for('static', filename='resources/insect_sounds/R_dominica.wav') }}"
+                         data-name="Rhyzopertha dominica"
+                         data-desc="Commonly known as the lesser grain borer, a destructive, cosmopolitan beetle pest of stored cereal grains and products."
+                         data-images='{{ [
+                             url_for("static", filename="resources/gallery/Rhyzopertha dominica 1.png"),
+                             url_for("static", filename="resources/gallery/Rhyzopertha dominica 2.png"),
+                             url_for("static", filename="resources/gallery/Rhyzopertha dominica 3.png")
+                         ] | tojson }}'>
+                        <div class="insect-item-name">R_Dominica</div>
+                        <div class="insect-item-desc">
+                            Commonly known as the lesser grain borer, a destructive, cosmopolitan
+                            beetle pest of stored cereal grains and products.
+                        </div>
+                    </div>
+
+                    <!-- INSECT 3: Tribolium castaneum — edit name/desc here -->
+                    <div class="insect-item"
+                         data-sound-src="{{ url_for('static', filename='resources/insect_sounds/T_castaneum.wav') }}"
+                         data-name="Tribolium castaneum"
+                         data-desc="Commonly known as the red flour beetle, a major cosmopolitan pest of stored grains, flour, and processed foods."
+                         data-images='{{ [
+                             url_for("static", filename="resources/gallery/Tribolium castaneum 1.png"),
+                             url_for("static", filename="resources/gallery/Tribolium castaneum 2.jpg"),
+                             url_for("static", filename="resources/gallery/Tribolium castaneum 3.jpg")
+                         ] | tojson }}'>
+                        <div class="insect-item-name">T_Castaneum</div>
+                        <div class="insect-item-desc">
+                            Commonly known as the red flour beetle, a major cosmopolitan pest of
+                            stored grains, flour, and processed foods.
+                        </div>
+                    </div>
+
+                </div>
+                </div><!-- /.insect-content -->
+            </div>
+
+            <!-- Right: Bootstrap carousel panel -->
+            <div class="col-lg-4 insect-right">
+                <div class="insect-carousel-wrapper">
+                    <!-- Overlay appears on image hover -->
+                    <div class="insect-overlay">
+                        <p id="insectOverlayName" class="insect-overlay-name"></p>
+                        <p id="insectOverlayDesc" class="insect-overlay-desc"></p>
+                    </div>
+                    <!-- Bootstrap Carousel — slides + indicators built dynamically by JS -->
+                    <div id="insectCarousel" class="carousel slide" data-bs-ride="false">
+                        <div class="carousel-indicators" id="carouselIndicators"></div>
+                        <div class="carousel-inner" id="carouselInner"></div>
+                        <button class="carousel-control-prev" type="button"
+                                data-bs-target="#insectCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon"></span>
+                        </button>
+                        <button class="carousel-control-next" type="button"
+                                data-bs-target="#insectCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ── Sponsors Section ───────────────────────────────────────────────── -->
+    <section id="sponsors" class="sponsors-section py-5">
+        <div class="container">
+            <h2 class="sponsors-heading">Funding Agencies</h2>
+            <div class="row g-4 justify-content-center">
+
+                <!-- SPONSOR 1 -->
+                <div class="col sponsor-card">
+                    <a href="https://www.irri.org" target="_blank">
+                        <img src="{{ url_for('static', filename='IRRI.png') }}" class="sponsor-logo">
+                        <p class="sponsor-body">The International Rice Research Institute (IRRI) is
+                            the world's premier research organization dedicated to reducing poverty and hunger through rice science.</p>
+                    </a>
+                </div>
+
+                <!-- SPONSOR 2 -->
+                <div class="col sponsor-card">
+                    <a href="https://www.cgiar.org/" target="_blank">
+                        <img src="{{ url_for('static', filename='CGIAR-logo.svg') }}" class="sponsor-logo">
+                        <p class="sponsor-body">Consultative Group on International Agricultural Research (CGIAR) is the world's largest global agricultural innovation network.
+                            We provide evidence to policy makers, innovation to partners,
+                            and new tools to harness the economic, environmental and nutritional power of agriculture.</p>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ── About Us Section ───────────────────────────────────────────────── -->
+    <section id="about" class="about-section py-5">
+        <div class="container">
+            <h2 class="about-heading">About Us</h2>
+            <div class="row g-4">
+
+                <!-- TEAM MEMBER 1 — replace placeholder div with <img src="..." class="about-photo"> and edit name/body -->
+                <div class="col-md-6">
+                    <div class="about-photo-placeholder">PHOTO</div>
+                    <h5 class="about-name">Dr. Carlito Balingbing</h5>
+                    <p class="about-body">Body text for whatever you'd like to add more to the subheading.</p>
+                </div>
+
+                <!-- TEAM MEMBER 2 — replace placeholder div with <img src="..." class="about-photo"> and edit name/body -->
+                <div class="col-md-6">
+                    <div class="about-photo-placeholder">PHOTO</div>
+                    <h5 class="about-name">Ian Carlo Perilla</h5>
+                    <p class="about-body">Body text for whatever you'd like to expand on the main point.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Contact Us Section ────────────────────────────────────────────── -->
+    <section id="contact" class="contact-section">
+        <div class="container">
+            <h3 class="contact-heading">Contact us</h3>
+            <div class="contact-footer">
+                <div class="contact-brand">ePADDY</div>
+                <div class="contact-links">
+                    <a href="/predict">Predict</a>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="#sponsors">Funding Agencies</a>
+                    <a href="/about-us">About us</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='assets/js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        // ── Insect Section Interactions ──────────────────────────────────────
+        const insectItems        = document.querySelectorAll('.insect-item');
+        const overlayName        = document.getElementById('insectOverlayName');
+        const overlayDesc        = document.getElementById('insectOverlayDesc');
+        const carouselEl         = document.getElementById('insectCarousel');
+        const carouselInner      = document.getElementById('carouselInner');
+        const carouselIndicators = document.getElementById('carouselIndicators');
+        let currentAudio = null;
+        let bsCarousel   = null;
+
+        // Build carousel once — one slide per insect using its first image
+        function buildCarousel() {
+            carouselInner.innerHTML = Array.from(insectItems).map((item, i) => {
+                const images = JSON.parse(item.dataset.images);
+                return `<div class="carousel-item${i === 0 ? ' active' : ''}">
+                            <img src="${images[0]}" alt="${item.dataset.name}">
+                        </div>`;
+            }).join('');
+
+            carouselIndicators.innerHTML = Array.from(insectItems).map((_, i) => `
+                <button type="button" data-bs-target="#insectCarousel"
+                        data-bs-slide-to="${i}"
+                        ${i === 0 ? 'class="active" aria-current="true"' : ''}
+                        aria-label="Slide ${i + 1}"></button>
+            `).join('');
+
+            bsCarousel = new bootstrap.Carousel(carouselEl, { interval: false, ride: false });
+        }
+
+        // Activate insect by index — optionally move the carousel to that slide
+        function activateInsect(item, moveCarousel = true) {
+            const index = Array.from(insectItems).indexOf(item);
+
+            insectItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            overlayName.textContent = item.dataset.name;
+            overlayDesc.textContent = item.dataset.desc;
+
+            if (moveCarousel && bsCarousel) bsCarousel.to(index);
+
+            if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+            currentAudio = new Audio(item.dataset.soundSrc);
+            currentAudio.volume = 0.5;
+            currentAudio.play().catch(() => {});
+        }
+
+        // When prev/next is clicked, activate the insect matching the new slide
+        carouselEl.addEventListener('slide.bs.carousel', function (e) {
+            activateInsect(insectItems[e.to], false);
+        });
+
+        // On hover, jump carousel to that insect
+        insectItems.forEach(item => {
+            item.addEventListener('mouseenter', function () { activateInsect(this); });
+        });
+
+        // Build on load and activate first insect
+        buildCarousel();
+        activateInsect(insectItems[0], false);
+    </script>
+</body>
+</html>

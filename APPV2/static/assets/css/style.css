@@ -1,0 +1,666 @@
+@font-face {
+    font-family: 'Serif';
+    src: url('../fonts/YoungSerif-Regular.ttf') format('truetype');
+    font-weight: 400;
+}
+
+body {
+    font-family: 'YoungSerif', serif;
+}
+
+.navbar {
+    background-color: #2D772D;
+    font-size: 36px;
+}
+
+.navbar-button {
+    font-size: 24px;
+    color: #FFFFFF;
+}
+
+
+/* Home page link button css */
+.navbar .nav-home {
+    color: #FFFFFF;
+    font-size: 36px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    margin : 10px;
+    text-decoration: none;
+    font-weight : bold;
+}
+
+
+
+/* Nav links default - no background, white text */
+.navbar .nav-link {
+    color: #FFFFFF;
+    font-size: 18px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    margin : 10px;
+}
+
+
+/* Hover - white bg, green text on the link only */
+.navbar .nav-link:hover {
+    background-color: #FFFFFF;
+    color: #2D772D;
+    border-radius: 6px;
+}
+
+/* Active page - same as hover */
+.navbar .nav-link.active {
+    background-color: #FFFFFF;
+    color: #2D772D;
+    border-radius: 6px;
+}
+
+/* Logo */
+.nav-logo {
+    height: 60px;
+    width: auto;
+    border-radius: 50%;
+    margin-right: 8px;
+    margin-top : -10px;
+}
+
+/* ── Predict Page ─────────────────────────────────────────────────────────── */
+
+.toggle-wrapper {
+    display: inline-flex;
+    border: 2px solid #2D772D;
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+.toggle-btn {
+    padding: 10px 32px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+}
+
+.toggle-btn.active {
+    background-color: #2D772D;
+    color: #FFFFFF;
+}
+
+.toggle-btn.inactive {
+    background-color: #FFFFFF;
+    color: #333333;
+}
+
+.predict-heading {
+    color: #2D772D;
+    font-weight: bold;
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+}
+
+.predict-subheading {
+    color: #6c757d;
+    font-size: 1rem;
+    margin-bottom: 32px;
+}
+
+.upload-icon-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    margin-top: 40px;
+}
+
+.upload-icon {
+    width: 64px;
+    height: 64px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.upload-icon-wrapper:hover .upload-icon {
+    opacity: 1;
+}
+
+/* ── Hero Section (index.html) ───────────────────────────────────────────── */
+
+.hero-section {
+    padding: 80px 0;
+    background-color: #ffffff;
+}
+
+.hero-title {
+    font-size: 4rem;
+    font-weight: 900;
+    color: #1a1a1a;
+    margin-bottom: 24px;
+}
+
+.hero-desc {
+    font-size: 1.2rem;
+    color: #333;
+    line-height: 1.8;
+}
+
+.hero-btn {
+    font-size: 1.06rem;
+    padding: 0.43rem 1.7rem;
+    display: inline-block;
+}
+
+/* ── Insects Section (index.html) ────────────────────────────────────────── */
+
+.insect-section {
+    overflow: hidden;
+}
+
+.insect-left {
+    background-color: #2D772D;
+    color: #ffffff;
+    min-height: 500px;
+    padding: 60px 0;
+}
+
+.insect-content {
+    padding: 0 50px;
+}
+
+.insect-heading {
+    font-weight: 900;
+    font-size: 2.13rem;
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+}
+
+.insect-item {
+    margin-bottom: 8px;
+    cursor: pointer;
+    padding: 12px 16px;
+    border-radius: 6px;
+    transition: background-color 0.7s ease;
+}
+
+.insect-item:hover,
+.insect-item.active {
+    background-color: #ffffff;
+}
+
+.insect-item-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+    transition: color 0.7s ease;
+}
+
+.insect-item:hover .insect-item-name,
+.insect-item.active .insect-item-name {
+    color: #2D772D;
+}
+
+.insect-item-desc {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.85);
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 1.0s ease, opacity 0.9s ease, color 0.7s ease;
+}
+
+.insect-item:hover .insect-item-desc,
+.insect-item.active .insect-item-desc {
+    max-height: 150px;
+    opacity: 1;
+    color: #2D772D;
+}
+
+.insect-right {
+    position: relative;
+    background-color: #2D772D;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+}
+
+.insect-carousel-wrapper {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#insectCarousel,
+#insectCarousel .carousel-inner,
+#insectCarousel .carousel-item {
+    height: 100%;
+}
+
+#insectCarousel .carousel-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.insect-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.65);
+    color: #ffffff;
+    padding: 20px 24px;
+    transform: translateY(100%);
+    transition: transform 0.35s ease;
+    pointer-events: none;
+}
+
+.insect-carousel-wrapper:hover .insect-overlay {
+    transform: translateY(0);
+}
+
+.insect-overlay-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
+.insect-overlay-desc {
+    font-size: 0.85rem;
+    margin-bottom: 0;
+    opacity: 0.9;
+}
+
+/* Bootstrap carousel indicator overrides for insect section */
+#insectCarousel .carousel-indicators [data-bs-slide-to] {
+    background-color: rgba(255, 255, 255, 0.45);
+}
+
+#insectCarousel .carousel-indicators .active {
+    background-color: #ffffff;
+}
+
+/* ── Sponsors Section (index.html) ───────────────────────────────────────── */
+
+.sponsors-section {
+    background: #ffffff;
+}
+
+.sponsors-heading {
+    font-weight: 900;
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+    text-align: center;
+ /*   margin-left: -65px;*/
+}
+
+.sponsor-card {
+    text-align: center;
+    transition: transform 0.2s ease;
+    margin-left: 60px;
+    margin-right: 60px;
+}
+
+.sponsor-card:hover {
+    transform: scale(1.05);
+}
+
+.sponsor-card a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.sponsor-logo {
+    max-height: 140px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    margin-bottom: 16px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.sponsor-logo-placeholder {
+    height: 140px;
+    background: #e9ecef;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+}
+
+.sponsor-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.sponsor-body {
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: #555;
+}
+
+/* ── About Us Section (index.html) ───────────────────────────────────────── */
+
+.about-section {
+    background: #2D772D;
+}
+
+.about-heading {
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+    text-align: center;
+    color: #ffffff;
+}
+
+.about-photo {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.about-photo-placeholder {
+    width: 100%;
+    height: 300px;
+    background: #e9ecef;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-size: 0.85rem;
+}
+
+.about-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #ffffff;
+    text-align: center;
+}
+
+.about-body {
+    font-size: 0.95rem;
+    color: #ffffff;
+    text-align: center;
+}
+
+/* ── Contact Us Section (index.html) ─────────────────────────────────────── */
+
+.contact-section {
+    background-color: #143414;
+    border-top: 1px solid #dee2e6;
+    padding: 40px 0;
+}
+
+.contact-heading {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: #ffffff;
+}
+
+.contact-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding-top: 16px;
+}
+
+.contact-brand {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.contact-links {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+}
+
+.contact-links a {
+    display: block;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1.0 rem;
+    margin-bottom: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.contact-links a:hover {
+    color: #2D772D;
+    background: #f0f0f0;
+}
+
+/* ── About Us Page (about-us.html) ──────────────────────────────────────── */
+
+.about-us-section {
+    padding: 80px 0 60px;
+}
+
+.about-us-heading {
+    font-size: 3rem;
+    font-weight: 900;
+    margin-bottom: 28px;
+    color: #1a1a1a;
+}
+
+.about-us-desc {
+    font-size: 1.05rem;
+    color: #333;
+    line-height: 1.9;
+}
+
+.about-us-photo-placeholder {
+    width: 100%;
+    aspect-ratio: 508 / 657;
+    background: #e9ecef;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-size: 0.85rem;
+}
+
+/* ── Funding Agencies (about-us.html) ────────────────────────────────────── */
+
+.funding-section {
+    padding: 60px 0;
+    border-top: 1px solid #dee2e6;
+}
+
+.funding-heading {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: #1a1a1a;
+}
+
+.funding-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0 10px;
+}
+
+.funding-item {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 18px 0;
+    border-bottom: 1px solid #dee2e6;
+    transition: transform 0.2s ease;
+}
+
+.funding-item:hover {
+    transform: scale(1.05);
+}
+
+.funding-item a {
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.funding-item:first-child {
+    border-top: 1px solid #dee2e6;
+}
+
+.funding-logo-placeholder {
+    width: 72px;
+    height: 72px;
+    background: #e9ecef;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.funding-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.funding-divider {
+    width: 1px;
+    height: 44px;
+    background: #dee2e6;
+    flex-shrink: 0;
+}
+
+.funding-name {
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.funding-desc {
+    color: #555;
+    font-size: 0.95rem;
+}
+
+/* ── Contact Us (about-us.html) ──────────────────────────────────────────── */
+
+.contact-us-section {
+    padding: 60px 0 80px;
+}
+
+.contact-us-heading {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 28px;
+    color: #1a1a1a;
+}
+
+.contact-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    text-decoration: none;
+    color: #333;
+    transition: color 0.2s;
+}
+
+.contact-icon-row:hover {
+    color: #2D772D;
+}
+
+.contact-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+/* ── Desktop (992px and up) ──────────────────────────────────────────────── */
+@media (min-width: 992px) {
+    /* current sizes are already desktop -- no changes needed here */
+}
+
+/* ── Mobile (767px and below) ────────────────────────────────────────────── */
+@media (max-width: 767px) {
+
+    .navbar { font-size: 31px; }
+    .navbar .nav-home { font-size: 31px; }
+    .navbar .nav-link { font-size: 15px; }
+    .nav-logo { height: 51px; }
+
+    .hero-section { padding: 40px 0; }
+    .hero-section .row { --bs-gutter-y: 1rem; }
+    .hero-title { font-size: 2.5rem; margin-bottom: 0; padding: 0 10px; }
+    .hero-desc { font-size: 0.90rem; padding: 0 10px; }
+
+    .insect-left { padding: 51px 0; }
+    .insect-content { padding: 0 42px; }
+    .insect-heading { font-size: 1.6rem; }
+    .insect-item-name { font-size: 1.0rem; }
+    .insect-item-desc { font-size: 1.1rem; }
+
+    .toggle-btn { font-size: 14px; padding: 8.5px 27px; }
+    .predict-heading { font-size: 2.1rem; }
+    .predict-subheading { font-size: 0.85rem; }
+
+    .about-us-heading { font-size: 2.55rem; }
+    .about-us-desc { font-size: 0.85rem; }
+
+    .sponsors-heading { font-size: 2.1rem; }
+    .sponsor-logo { max-height: 119px; }
+    .sponsor-body { font-size: 1.0rem; }
+
+    .about-heading { font-size: 2.1rem; }
+    .about-photo { height: 255px; }
+
+    .funding-heading { font-size: 1.53rem; }
+    .funding-logo { width: 61px; height: 61px; }
+
+    .contact-heading { font-size: 1.7rem; }
+    .contact-section { padding: 34px 0; }
+}
+
+/* ── Error Alert (predict.html #errorArea) ──────────────────────────────── */
+
+#errorMsg {
+    background-color: #fff5f5;
+    border: 1px solid #f5c2c7;
+    border-left: 5px solid #dc3545;
+    color: #842029;
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-size: 0.95rem;
+    font-weight: 500;
+}

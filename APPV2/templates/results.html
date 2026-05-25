@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePADDY | Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/style.css') }}">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="nav-home" href="/">
+                <img src="{{ url_for('static', filename='Acoustic sensor.png') }}"
+                     alt="ePADDY Logo" class="nav-logo">
+                ePADDY
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-button collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/predict">Predict</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about-us">About us</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Results Section -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="mb-4">Last Prediction Results</h2>
+
+            {% if result is not none %}
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>File Name</th>
+                        <th>S. Oryzae (SO)</th>
+                        <th>T. Castaneum (TC)</th>
+                        <th>R. Dominica (RD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in result %}
+                    <tr>
+                        <td>{{ item.file_name }}</td>
+                        <td>{{ item.num_detect_so }} &mdash; {{ item.pct_so }}%</td>
+                        <td>{{ item.num_detect_tc }} &mdash; {{ item.pct_tc }}%</td>
+                        <td>{{ item.num_detect_rd }} &mdash; {{ item.pct_rd }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="/predict" class="btn btn-success mt-2">Upload Another File</a>
+
+            {% else %}
+            <div class="alert alert-info" style="max-width: 600px;">
+                No results found. <a href="/predict" class="alert-link">Upload a file</a> to run a prediction.
+            </div>
+            {% endif %}
+
+        </div>
+    </section>
+
+    <script src="{{ url_for('static', filename='assets/js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>
