@@ -14,6 +14,13 @@ from init_database import init_db, get_connection
 sys.path.append(os.path.join(os.path.dirname(__file__), "../python"))
 from classifier import classify
 
+from dashboard_service import (
+    get_dashboard_data,
+    get_daily_summary,
+    get_weekly_summary,
+    invalidate_cache,
+)
+
 # ── Config ────────────────────────────────────────────────────────────────────
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "../config.ini")
 config = configparser.ConfigParser()
@@ -87,6 +94,12 @@ atexit.register(clear_upload_cache)
 def index():
     return render_template("index.html")
 
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+
+
 @app.route("/predict", methods=["GET"])
 def upload():
     return render_template("predict.html")
@@ -107,6 +120,52 @@ def results():
     return render_template("results.html", result=result)
 
 
+# ── Dashboard API Routes ──────────────────────────────────────────────────────
+@app.route("/api/dashboard")
+def dashboard_api():
+    try:
+        filters = {
+            "start_date": sanitize(request.args.get("start_date", "")),
+            "end_date"  : sanitize(request.args.get("end_date",   "")),
+            "area"      : sanitize(request.args.get("area",       "")),
+            "time_start": sanitize(request.args.get("time_start", "")),
+            "time_end"  : sanitize(request.args.get("time_end",   "")),
+            "insect"    : sanitize(request.args.get("insect",     "")),
+        }
+        return jsonify(get_dashboard_data(filters))
+    except Exception as e:
+        log_error("dashboard_api", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/dashboard/daily")
+def dashboard_daily():
+    try:
+        date = sanitize(request.args.get("date", "")) or None
+        return jsonify(get_daily_summary(date))
+    except Exception as e:
+        log_error("dashboard_daily", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/dashboard/weekly")
+def dashboard_weekly():
+    try:
+        month = sanitize(request.args.get("month", "")) or None
+        return jsonify(get_weekly_summary(month))
+    except Exception as e:
+        log_error("dashboard_weekly", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/cache/invalidate", methods=["POST"])
+def cache_invalidate():
+    """Called by cron job or after new data is saved to force a refresh."""
+    invalidate_cache()
+    return jsonify({"status": "cache cleared"})
+
+
+# ── Prediction Routes ─────────────────────────────────────────────────────────
 @app.route("/predict-uploads", methods=["POST"])
 def predict():
     try:
@@ -115,7 +174,6 @@ def predict():
         if not files or all(f.filename == "" for f in files):
             return jsonify({"error": "No files uploaded"}), 400
 
-        # Validate all files are .wav
         for f in files:
             if not f.filename.lower().endswith(".wav"):
                 return jsonify({"error": f"Invalid file type: {f.filename}. Only .wav files are supported."}), 400
@@ -126,23 +184,19 @@ def predict():
         os.makedirs(SPEC_PATH, exist_ok=True)
         os.makedirs(GRAPHS_PATH, exist_ok=True)
 
-        # Save all uploaded files
         for f in files:
             save_path = os.path.join(RECORDINGS_PATH, f.filename)
             f.save(save_path)
 
-        # Classify — returns list of dicts
         prediction_results = classify(RECORDINGS_PATH, AUDIO_OUTPUT, MODEL_PATH)
 
         if not isinstance(prediction_results, list):
             raise ValueError(f"Classifier error: {prediction_results}")
 
-        # Delete all wav files after classification
         for f in os.listdir(RECORDINGS_PATH):
             if f.lower().endswith(".wav"):
                 os.remove(os.path.join(RECORDINGS_PATH, f))
 
-        # Save results to upload_predictions.json
         output_file = os.path.join(RESULTS_PATH, "upload_predictions.json")
         with open(output_file, "w") as f:
             json.dump(prediction_results, f, indent=2)
@@ -162,6 +216,8 @@ def receive_results():
         data = request.get_json(silent=True)
         if not data or "results" not in data:
             raise ValueError("Invalid payload")
+        # New data from RPi — bust the dashboard cache
+        invalidate_cache()
         return jsonify({"status": "ok"})
     except Exception as e:
         log_error("receive_results", e)

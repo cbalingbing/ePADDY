@@ -11,6 +11,8 @@ body {
 .navbar {
     background-color: #2D772D;
     font-size: 36px;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .navbar-button {
@@ -22,13 +24,13 @@ body {
 /* Home page link button css */
 .navbar .nav-home {
     color: #FFFFFF;
-    font-size: 36px;
-    padding: 6px 16px;
+    font-size: 28px;
+    padding: 4px 12px;
     border-radius: 6px;
     transition: all 0.2s;
-    margin : 10px;
+    margin: 4px;
     text-decoration: none;
-    font-weight : bold;
+    font-weight: bold;
 }
 
 
@@ -60,11 +62,11 @@ body {
 
 /* Logo */
 .nav-logo {
-    height: 60px;
+    height: 45px;
     width: auto;
     border-radius: 50%;
     margin-right: 8px;
-    margin-top : -10px;
+    margin-top: 0;
 }
 
 /* ── Predict Page ─────────────────────────────────────────────────────────── */
@@ -650,6 +652,269 @@ body {
 
     .contact-heading { font-size: 1.7rem; }
     .contact-section { padding: 34px 0; }
+}
+
+/* ── Dashboard ───────────────────────────────────────────────────────────── */
+
+.db-header {
+    background-color: #2D772D;
+    padding: 40px 0 28px;
+}
+
+.db-title {
+    color: #ffffff;
+    font-size: 2.4rem;
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.db-subtitle {
+    color: rgba(255,255,255,0.8);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.db-body {
+    padding-top: 28px;
+}
+
+/* Filter bar */
+.db-filter-bar {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+}
+
+.db-filter-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #555;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.db-filter-input {
+    font-size: 0.88rem;
+    border-color: #ced4da;
+}
+
+.db-filter-input:focus {
+    border-color: #2D772D;
+    box-shadow: 0 0 0 0.2rem rgba(45,119,45,0.2);
+}
+
+.db-btn-apply {
+    background-color: #2D772D;
+    color: #fff;
+    font-size: 0.9rem;
+    padding: 6px 22px;
+    border-radius: 6px;
+}
+
+.db-btn-apply:hover { background-color: #245f24; color: #fff; }
+
+.db-btn-reset {
+    background-color: #fff;
+    color: #2D772D;
+    border: 1px solid #2D772D;
+    font-size: 0.9rem;
+    padding: 6px 22px;
+    border-radius: 6px;
+}
+
+.db-btn-reset:hover { background-color: #f0f8f0; }
+
+.db-spinner {
+    font-size: 0.88rem;
+    color: #555;
+    align-self: center;
+}
+
+/* Summary cards */
+.db-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 20px 22px;
+    height: 100%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.db-card-latest   { border-left: 5px solid #2D772D; }
+.db-card-total    { border-left: 5px solid #2196F3; }
+.db-card-dominant { border-left: 5px solid #FF9800; }
+
+.db-card-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #888;
+    margin-bottom: 6px;
+}
+
+.db-card-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.db-card-big { font-size: 2rem; }
+
+.db-card-sub {
+    font-size: 0.83rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+.db-est-block {
+    text-align: center;
+    background: #f0f8f0;
+    border: 1px solid #c3e6c3;
+    border-radius: 8px;
+    padding: 12px 18px;
+    min-width: 90px;
+}
+
+.db-est-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #2D772D;
+    letter-spacing: 0.5px;
+}
+
+.db-est-value {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #2D772D;
+    line-height: 1.1;
+}
+
+.db-est-unit {
+    font-size: 0.72rem;
+    color: #555;
+}
+
+.db-badge {
+    display: inline-block;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+}
+
+/* Section wrapper */
+.db-section {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.db-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px 18px;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #1a1a1a;
+    background: #fafafa;
+}
+
+.db-section-sub {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: #888;
+}
+
+/* Table */
+.db-table-wrapper {
+    overflow-x: auto;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.db-table {
+    font-size: 0.83rem;
+    margin-bottom: 0;
+}
+
+.db-table thead th {
+    position: sticky;
+    top: 0;
+    background: #2D772D;
+    color: #fff;
+    font-weight: 700;
+    white-space: nowrap;
+    border: none;
+    padding: 10px 12px;
+    z-index: 1;
+}
+
+.db-table tbody tr:hover { background-color: #f0f8f0; }
+
+.db-table tbody td {
+    padding: 8px 12px;
+    vertical-align: middle;
+    border-color: #f0f0f0;
+}
+
+.db-count {
+    display: inline-block;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: #fff;
+}
+
+.db-count.so { background: #4CAF50; }
+.db-count.tc { background: #FF9800; }
+.db-count.rd { background: #2196F3; }
+
+.db-area-cell {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Charts */
+.db-chart-container {
+    padding: 16px;
+    height: 300px;
+    position: relative;
+}
+
+.db-chart-donut {
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Map */
+.db-map {
+    height: 460px;
+    width: 100%;
+    border-radius: 0 0 10px 10px;
+}
+
+/* ── Dashboard Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+    .db-title    { font-size: 1.8rem; }
+    .db-header   { padding: 28px 0 20px; }
+    .db-card-big { font-size: 1.5rem; }
+    .db-map      { height: 300px; }
+    .db-chart-container { height: 240px; }
 }
 
 /* ── Error Alert (predict.html #errorArea) ──────────────────────────────── */

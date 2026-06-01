@@ -11,6 +11,22 @@ import json
 from datetime import datetime
 from preprocessing import process_audio_file
 from inference import YOLOClassifier
+from sensor_lookup import get_sensor_reading, parse_audio_filename
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Database'))
+from init_database import save_detection
+
+
+def load_config(config_path: str) -> dict:
+    config = {}
+    with open(config_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            key, _, value = line.partition('=')
+            config[key.strip()] = value.strip()
+    return config
 
 
 def get_latest_audio_file(input_folder: str, file_extension: str = '.wav'):
@@ -86,7 +102,19 @@ def main():
         default=None,
         help='Path to save prediction results as JSON (optional)'
     )
-    
+    parser.add_argument(
+        '--csv-path',
+        type=str,
+        default=None,
+        help='Path to sensor CSV file (temp/humidity) on the shared mount'
+    )
+    parser.add_argument(
+        '--area',
+        type=str,
+        default='Unknown',
+        help='Deployment area label stored in the detections table'
+    )
+
     args = parser.parse_args()
     
     print("=" * 80)
@@ -136,7 +164,7 @@ def main():
     # Step 4: Run predictions
     print("\n[Step 4] Running predictions...")
     try:
-        results, summary = classifier.predict_batch(
+        summary = classifier.predict_batch(
             image_folder=args.output_folder,
             file_extension='.png'
         )
@@ -145,9 +173,50 @@ def main():
         print(f"❌ Error during prediction: {str(e)}")
         sys.exit(1)
     
-    # Step 5: Save results if requested
+    # Step 5: Save detection to DB
+    print("\n[Step 5] Saving detection to database...")
+    class_counts = summary['class_counts']
+    num_so = class_counts.get('S_Oryzae', 0)
+    num_tc = class_counts.get('T_Castaneum', 0)
+    num_rd = class_counts.get('R_Dominica', 0)
+
+    # Match sensor reading from CSV (temp/humidity)
+    temp, humid = None, None
+    if args.csv_path:
+        temp, humid = get_sensor_reading(latest_file, args.csv_path)
+    else:
+        print("[Step 5] --csv-path not provided, temp/humid will be NULL")
+
+    # Parse date and time from the audio filename timestamp
+    parsed = parse_audio_filename(latest_file)
+    if parsed:
+        node_id, _, rec_date, rec_time = parsed
+    else:
+        node_id = 'unknown'
+        rec_date = file_creation_time.strftime("%Y-%m-%d")
+        rec_time = file_creation_time.strftime("%H:%M:%S")
+
+    saved = save_detection(
+        date=rec_date,
+        time=rec_time,
+        sensor_number=node_id,
+        area=args.area,
+        num_so=num_so,
+        num_tc=num_tc,
+        num_rd=num_rd,
+        temp=temp,
+        humid=humid,
+    )
+    if saved:
+        print(f"  Saved — date={rec_date}, time={rec_time}, node={node_id}, "
+              f"so={num_so}, tc={num_tc}, rd={num_rd}, "
+              f"temp={temp}, humid={humid}")
+    else:
+        print("  Warning: detection was NOT saved to DB")
+
+    # Step 6: Save results JSON if requested
     if args.save_results:
-        print(f"\n[Step 5] Saving results to {args.save_results}...")
+        print(f"\n[Step 6] Saving results to {args.save_results}...")
         try:
             output_data = {
                 'audio_file': os.path.basename(latest_file),
@@ -160,7 +229,7 @@ def main():
                     'total_images': summary['total_images'],
                     'class_counts': summary['class_counts']
                 },
-                'detailed_results': results
+                'detailed_results': summary.get('results', [])
             }
             
             os.makedirs(os.path.dirname(args.save_results) if os.path.dirname(args.save_results) else '.', exist_ok=True)
