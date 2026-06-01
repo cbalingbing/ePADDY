@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePADDY | Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+
+    <!-- ── Navbar ─────────────────────────────────────────────────────────── -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="nav-home" href="/">
+                <img src="{{ url_for('static', filename='Acoustic sensor.png') }}"
+                     alt="ePADDY Logo" class="nav-logo">
+                ePADDY
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-button collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/predict">Predict</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/about-us">About us</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid db-body px-4">
+
+        <!-- ── Filters ────────────────────────────────────────────────────── -->
+        <div class="db-filter-bar">
+            <div class="row g-2 align-items-end">
+                <div class="col-6 col-md-2">
+                    <label class="db-filter-label">From</label>
+                    <input type="date" id="startDate" class="form-control db-filter-input">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="db-filter-label">To</label>
+                    <input type="date" id="endDate" class="form-control db-filter-input">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="db-filter-label">Time From</label>
+                    <input type="time" id="timeStart" class="form-control db-filter-input">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="db-filter-label">Time To</label>
+                    <input type="time" id="timeEnd" class="form-control db-filter-input">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="db-filter-label">Area</label>
+                    <select id="areaFilter" class="form-select db-filter-input">
+                        <option value="">All Areas</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="db-filter-label">Insect</label>
+                    <select id="insectFilter" class="form-select db-filter-input">
+                        <option value="">All</option>
+                        <option value="so">S. Oryzae</option>
+                        <option value="tc">T. Castaneum</option>
+                        <option value="rd">R. Dominica</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col d-flex gap-2">
+                    <button class="btn db-btn-apply" onclick="applyFilters()">Apply</button>
+                    <button class="btn db-btn-reset" onclick="resetFilters()">Reset</button>
+                    <span id="loadingSpinner" class="db-spinner d-none">
+                        <span class="spinner-border spinner-border-sm text-success"></span>
+                        Loading...
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Summary Cards ──────────────────────────────────────────────── -->
+        <div class="row g-3 mb-4">
+
+            <!-- Latest Detection + EST_SO -->
+            <div class="col-md-5">
+                <div class="db-card db-card-latest">
+                    <div class="db-card-label">Latest Detection</div>
+                    <div class="d-flex justify-content-between align-items-start mt-1">
+                        <div>
+                            <div class="db-card-value" id="latestDatetime">—</div>
+                            <div class="db-card-sub" id="latestNode">—</div>
+                            <div class="db-card-sub" id="latestArea">—</div>
+                            <div class="mt-2 d-flex gap-2" id="latestBadges"></div>
+                        </div>
+                        <div class="db-est-block">
+                            <div class="db-est-label">EST. S. Oryzae</div>
+                            <div class="db-est-value" id="latestEstSo">—</div>
+                            <div class="db-est-unit">insects</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Records -->
+            <div class="col-md-3">
+                <div class="db-card db-card-total">
+                    <div class="db-card-label">Total Detections</div>
+                    <div class="db-card-value db-card-big" id="totalRecords">—</div>
+                    <div class="db-card-sub">records in database</div>
+                </div>
+            </div>
+
+            <!-- Dominant Pest -->
+            <div class="col-md-4">
+                <div class="db-card db-card-dominant">
+                    <div class="db-card-label">Dominant Pest</div>
+                    <div class="db-card-value db-card-big" id="dominantPest">—</div>
+                    <div class="db-card-sub" id="dominantCount">—</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Recent Detections Table ────────────────────────────────────── -->
+        <div class="db-section mb-4">
+            <div class="db-section-header">
+                <span>Recent Detections</span>
+                <span class="db-section-sub">Latest 50 records</span>
+            </div>
+            <div class="db-table-wrapper">
+                <table class="table db-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Node</th>
+                            <th>Area</th>
+                            <th>Temp (°C)</th>
+                            <th>Humid (%)</th>
+                            <th>SO</th>
+                            <th>TC</th>
+                            <th>RD</th>
+                            <th>%SO</th>
+                            <th>%TC</th>
+                            <th>%RD</th>
+                            <th>EST_SO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detectionTableBody">
+                        <tr><td colspan="13" class="text-center text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Charts ─────────────────────────────────────────────────────── -->
+        <div class="row g-4 mb-4">
+
+            <!-- Hourly Detections -->
+            <div class="col-lg-8">
+                <div class="db-section h-100">
+                    <div class="db-section-header">
+                        <span>Hourly Detections</span>
+                        <span class="db-section-sub">Detections per hour by pest type</span>
+                    </div>
+                    <div class="db-chart-container">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pest Distribution Donut -->
+            <div class="col-lg-4">
+                <div class="db-section h-100">
+                    <div class="db-section-header">
+                        <span>Pest Distribution</span>
+                        <span class="db-section-sub">Total detections by type</span>
+                    </div>
+                    <div class="db-chart-container db-chart-donut">
+                        <canvas id="donutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row g-4 mb-4">
+
+            <!-- Temp & Humidity -->
+            <div class="col-lg-6">
+                <div class="db-section h-100">
+                    <div class="db-section-header">
+                        <span>Temperature & Humidity</span>
+                        <span class="db-section-sub">Sensor readings over time</span>
+                    </div>
+                    <div class="db-chart-container">
+                        <canvas id="thChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EST_SO Trend -->
+            <div class="col-lg-6">
+                <div class="db-section h-100">
+                    <div class="db-section-header">
+                        <span>Estimated S. Oryzae Count</span>
+                        <span class="db-section-sub">Linear regression estimate over time</span>
+                    </div>
+                    <div class="db-chart-container">
+                        <canvas id="estChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Location Heatmap ───────────────────────────────────────────── -->
+        <div class="db-section mb-5">
+            <div class="db-section-header">
+                <span>Detection Heatmap</span>
+                <span class="db-section-sub">Sensor locations and detection intensity</span>
+            </div>
+            <div id="detectionMap" class="db-map"></div>
+        </div>
+
+    </div>
+
+    <!-- ── Footer ─────────────────────────────────────────────────────────── -->
+    <section class="contact-section">
+        <div class="container">
+            <h3 class="contact-heading">Contact us</h3>
+            <div class="contact-footer">
+                <div class="contact-brand">ePADDY</div>
+                <div class="contact-links">
+                    <a href="/predict">Predict</a>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/about-us">About us</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Scripts ────────────────────────────────────────────────────────── -->
+    <script src="{{ url_for('static', filename='assets/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script>
+    // ── Constants ────────────────────────────────────────────────────────────
+    const COLORS = {
+        so  : '#4CAF50',
+        tc  : '#FF9800',
+        rd  : '#2196F3',
+        temp: '#FF5722',
+        hum : '#03A9F4',
+        est : '#2D772D',
+    };
+
+    const CLASS_LABELS = {
+        so: 'S. Oryzae',
+        tc: 'T. Castaneum',
+        rd: 'R. Dominica',
+    };
+
+    // ── JS Memory Cache ──────────────────────────────────────────────────────
+    const jsCache = {
+        store : {},
+        ttl   : 60000,  // 1 minute
+        set(key, data) { this.store[key] = { data, ts: Date.now() }; },
+        get(key) {
+            const e = this.store[key];
+            return (e && Date.now() - e.ts < this.ttl) ? e.data : null;
+        },
+    };
+
+    // ── Chart instances ──────────────────────────────────────────────────────
+    let hourlyChart, donutChart, thChart, estChart;
+    let map, heatLayer;
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function fmt(v, decimals = 1) {
+        return (v === null || v === undefined) ? '—' : Number(v).toFixed(decimals);
+    }
+
+    function showLoading(on) {
+        document.getElementById('loadingSpinner').classList.toggle('d-none', !on);
+    }
+
+    function getFilterParams() {
+        return {
+            start_date : document.getElementById('startDate').value,
+            end_date   : document.getElementById('endDate').value,
+            area       : document.getElementById('areaFilter').value,
+            time_start : document.getElementById('timeStart').value,
+            time_end   : document.getElementById('timeEnd').value,
+            insect     : document.getElementById('insectFilter').value,
+        };
+    }
+
+    // ── Fetch & render ────────────────────────────────────────────────────────
+    async function loadDashboard() {
+        const params = getFilterParams();
+        const key    = JSON.stringify(params);
+
+        let data = jsCache.get(key);
+        if (!data) {
+            showLoading(true);
+            try {
+                const qs   = new URLSearchParams(params).toString();
+                const resp = await fetch(`/api/dashboard?${qs}`);
+                data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                jsCache.set(key, data);
+            } catch (err) {
+                console.error('Dashboard fetch failed:', err);
+                showLoading(false);
+                return;
+            }
+            showLoading(false);
+        }
+
+        populateAreaDropdown(data.areas);
+        renderCards(data);
+        renderTable(data.recent);
+        renderHourlyChart(data.hourly);
+        renderDonut(data.totals);
+        renderTHChart(data.th_trend);
+        renderEstChart(data.est_trend);
+        renderHeatmap(data.locations);
+    }
+
+    function applyFilters() {
+        loadDashboard();
+    }
+
+    function resetFilters() {
+        ['startDate','endDate','timeStart','timeEnd'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('areaFilter').value   = '';
+        document.getElementById('insectFilter').value = '';
+        loadDashboard();
+    }
+
+    // ── Area dropdown ────────────────────────────────────────────────────────
+    function populateAreaDropdown(areas) {
+        const sel = document.getElementById('areaFilter');
+        const cur = sel.value;
+        // Keep "All Areas" option, rebuild rest
+        while (sel.options.length > 1) sel.remove(1);
+        (areas || []).forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a;
+            opt.text  = a;
+            sel.add(opt);
+        });
+        sel.value = cur;
+    }
+
+    // ── Summary Cards ────────────────────────────────────────────────────────
+    function renderCards(data) {
+        const latest = data.latest;
+
+        if (latest) {
+            document.getElementById('latestDatetime').textContent =
+                `${latest.date}  ${latest.time}`;
+            document.getElementById('latestNode').textContent =
+                `Node: ${latest.sensor_number}`;
+            document.getElementById('latestArea').textContent =
+                `Area: ${latest.area || '—'}`;
+            document.getElementById('latestEstSo').textContent =
+                latest.est_so ?? '—';
+
+            const badges = document.getElementById('latestBadges');
+            badges.innerHTML = '';
+            [['so','num_detect_so'],['tc','num_detect_tc'],['rd','num_detect_rd']]
+                .forEach(([key, field]) => {
+                    if (latest[field] > 0) {
+                        badges.innerHTML +=
+                            `<span class="db-badge" style="background:${COLORS[key]}">
+                                ${CLASS_LABELS[key]}: ${latest[field]}
+                            </span>`;
+                    }
+                });
+        }
+
+        document.getElementById('totalRecords').textContent =
+            (data.total_count ?? 0).toLocaleString();
+
+        // Dominant pest from totals
+        const t = data.totals || {};
+        const pestMap = [
+            ['S. Oryzae',    t.total_so || 0],
+            ['T. Castaneum', t.total_tc || 0],
+            ['R. Dominica',  t.total_rd || 0],
+        ];
+        const dominant = pestMap.reduce((a, b) => b[1] > a[1] ? b : a, ['—', 0]);
+        document.getElementById('dominantPest').textContent  = dominant[0];
+        document.getElementById('dominantCount').textContent =
+            dominant[1] > 0 ? `${dominant[1].toLocaleString()} total detections` : 'No data';
+    }
+
+    // ── Recent Detections Table ──────────────────────────────────────────────
+    function renderTable(rows) {
+        const tbody = document.getElementById('detectionTableBody');
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">No records found</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => `
+            <tr>
+                <td>${r.date}</td>
+                <td>${r.time}</td>
+                <td>${r.sensor_number}</td>
+                <td class="db-area-cell" title="${r.area || ''}">${r.area || '—'}</td>
+                <td>${r.temp !== null ? fmt(r.temp) : '—'}</td>
+                <td>${r.humid !== null ? fmt(r.humid) : '—'}</td>
+                <td><span class="db-count so">${r.num_detect_so}</span></td>
+                <td><span class="db-count tc">${r.num_detect_tc}</span></td>
+                <td><span class="db-count rd">${r.num_detect_rd}</span></td>
+                <td>${fmt(r.pct_so)}%</td>
+                <td>${fmt(r.pct_tc)}%</td>
+                <td>${fmt(r.pct_rd)}%</td>
+                <td><strong>${r.est_so ?? '—'}</strong></td>
+            </tr>
+        `).join('');
+    }
+
+    // ── Hourly Detections Chart ──────────────────────────────────────────────
+    function renderHourlyChart(hourly) {
+        const labels = (hourly || []).map(r => `${r.date} ${r.hour}:00`);
+        const so     = (hourly || []).map(r => r.so || 0);
+        const tc     = (hourly || []).map(r => r.tc || 0);
+        const rd     = (hourly || []).map(r => r.rd || 0);
+
+        if (hourlyChart) hourlyChart.destroy();
+        hourlyChart = new Chart(document.getElementById('hourlyChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'S. Oryzae',    data: so, backgroundColor: COLORS.so, stack: 'a' },
+                    { label: 'T. Castaneum', data: tc, backgroundColor: COLORS.tc, stack: 'a' },
+                    { label: 'R. Dominica',  data: rd, backgroundColor: COLORS.rd, stack: 'a' },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { stacked: true, ticks: { maxRotation: 45, maxTicksLimit: 20 } },
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Detections' } },
+                },
+            },
+        });
+    }
+
+    // ── Pest Distribution Donut ──────────────────────────────────────────────
+    function renderDonut(totals) {
+        const so = totals?.total_so || 0;
+        const tc = totals?.total_tc || 0;
+        const rd = totals?.total_rd || 0;
+
+        if (donutChart) donutChart.destroy();
+        donutChart = new Chart(document.getElementById('donutChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['S. Oryzae', 'T. Castaneum', 'R. Dominica'],
+                datasets: [{
+                    data: [so, tc, rd],
+                    backgroundColor: [COLORS.so, COLORS.tc, COLORS.rd],
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct   = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                                return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    // ── Temp & Humidity Chart ────────────────────────────────────────────────
+    function renderTHChart(th) {
+        const labels = (th || []).map(r => `${r.date} ${r.time}`);
+        const temps  = (th || []).map(r => r.temp);
+        const humids = (th || []).map(r => r.humid);
+
+        if (thChart) thChart.destroy();
+        thChart = new Chart(document.getElementById('thChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        data: temps,
+                        borderColor: COLORS.temp,
+                        backgroundColor: COLORS.temp + '22',
+                        yAxisID: 'yTemp',
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 2,
+                    },
+                    {
+                        label: 'Humidity (%)',
+                        data: humids,
+                        borderColor: COLORS.hum,
+                        backgroundColor: COLORS.hum + '22',
+                        yAxisID: 'yHum',
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 2,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x     : { ticks: { maxRotation: 45, maxTicksLimit: 15 } },
+                    yTemp : { type: 'linear', position: 'left',  title: { display: true, text: '°C' } },
+                    yHum  : { type: 'linear', position: 'right', title: { display: true, text: '%' },
+                              grid: { drawOnChartArea: false } },
+                },
+            },
+        });
+    }
+
+    // ── EST_SO Trend Chart ───────────────────────────────────────────────────
+    function renderEstChart(est) {
+        const labels = (est || []).map(r => `${r.date} ${r.time}`);
+        const values = (est || []).map(r => r.est_so || 0);
+
+        if (estChart) estChart.destroy();
+        estChart = new Chart(document.getElementById('estChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Est. S. Oryzae Count',
+                    data: values,
+                    borderColor: COLORS.est,
+                    backgroundColor: COLORS.est + '22',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 3,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { ticks: { maxRotation: 45, maxTicksLimit: 15 } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Insects (est.)' } },
+                },
+            },
+        });
+    }
+
+    // ── Heatmap ──────────────────────────────────────────────────────────────
+    function renderHeatmap(locations) {
+        // Init map once
+        if (!map) {
+            map = L.map('detectionMap').setView([14.5995, 120.9842], 8);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+            }).addTo(map);
+        }
+
+        // Remove old heat layer
+        if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+
+        const heatData = [];
+        const markers  = [];
+
+        (locations || []).forEach(loc => {
+            if (!loc.area) return;
+            const parts = loc.area.split(',');
+            if (parts.length !== 2) return;
+            const lon = parseFloat(parts[0]);
+            const lat = parseFloat(parts[1]);
+            if (isNaN(lon) || isNaN(lat)) return;
+
+            heatData.push([lat, lon, loc.total || 1]);
+
+            // Add a marker with popup
+            const marker = L.circleMarker([lat, lon], {
+                radius      : 7,
+                fillColor   : '#2D772D',
+                color       : '#fff',
+                weight      : 2,
+                opacity     : 1,
+                fillOpacity : 0.85,
+            }).bindPopup(
+                `<strong>Area:</strong> ${loc.area}<br>
+                 <strong>Total Detections:</strong> ${loc.total}`
+            );
+            markers.push(marker);
+        });
+
+        if (heatData.length > 0) {
+            heatLayer = L.heatLayer(heatData, {
+                radius  : 35,
+                blur    : 20,
+                maxZoom : 12,
+                gradient: { 0.2: '#4CAF50', 0.5: '#FF9800', 1.0: '#f03' },
+            }).addTo(map);
+
+            markers.forEach(m => m.addTo(map));
+
+            // Fit map to markers
+            const bounds = L.latLngBounds(heatData.map(p => [p[0], p[1]]));
+            map.fitBounds(bounds, { padding: [40, 40] });
+        }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+
+</body>
+</html>

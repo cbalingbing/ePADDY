@@ -51,3 +51,4 @@ setup_script_rpi0/config.txt
 
 # Retrieve audio folder
 retrieve_audio/
+RPI5 sensor/
