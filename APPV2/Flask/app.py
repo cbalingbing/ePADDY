@@ -12,7 +12,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../Database"))
 from init_database import init_db, get_connection
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../python"))
-from classifier import classify
+try:
+    from classifier import classify
+    CLASSIFIER_AVAILABLE = True
+except ImportError as _e:
+    CLASSIFIER_AVAILABLE = False
+    classify = None
+    print(f"[WARNING] Classifier not available (missing ML deps): {_e}")
 
 from dashboard_service import (
     get_dashboard_data,
@@ -168,6 +174,8 @@ def cache_invalidate():
 # ── Prediction Routes ─────────────────────────────────────────────────────────
 @app.route("/predict-uploads", methods=["POST"])
 def predict():
+    if not CLASSIFIER_AVAILABLE:
+        return jsonify({"error": "Classifier not available on this server (ML dependencies not installed)."}), 503
     try:
         files = request.files.getlist("file")
 
