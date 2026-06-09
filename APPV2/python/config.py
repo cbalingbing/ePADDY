@@ -3,36 +3,36 @@ Audio processing configuration parameters for ePADDY
 Based on Table 2 specifications
 """
 
-
 class AudioConfig:
-    """Audio processing configuration parameters from Table 2"""
-    
-    # Sample Rate
-    SR = 44100  # 44,100 Hz
-    
-    # FFT Parameters
-    NFFT = 4096  # Number of FFT Points
-    WIN_LENGTH = 4096  # Window Length in samples
-    WIN_FUNCTION = 'hann'  # Window Function (Hann window)
-    
-    # Time Resolution
-    TIME_RESOLUTION = 0.015  # 0.015 seconds
-    
-    # Calculate hop_length from time resolution
-    # hop_length = time_resolution * sample_rate
-    HOP_LENGTH = int(TIME_RESOLUTION * SR)  # 661 samples
-    
-    # Mel Spectrogram Parameters
-    MELS = 512  # Number of Mel Bands
-    FREQUENCY_MIN = 50.0  # Minimum Frequency in Hz
-    FREQUENCY_MAX = 16000.0  # Maximum Frequency in Hz
-    
-    # YOLO Input Size
-    TARGET_SIZE = (640, 640)  # Width × Height for YOLOv8/v11
-    
-    # Segment Duration
-    SEGMENT_DURATION = 10.0  # 10 seconds (as mentioned in paper)
+    """ePADDY audio processing parameters."""
 
+    # ── Sample Rate ──────────────────────────────────────────
+    SR               = 8000          # Sample rate (Hz)
+
+    # ── FFT Parameters ───────────────────────────────────────
+    NFFT             = 1024          # FFT points
+    WIN_LENGTH       = 1024          # Window length (samples)
+    WIN_FUNCTION     = 'hann'        # Window function
+    HOP_LENGTH       = 256           # Hop length (samples)
+
+    # ── Mel Spectrogram ──────────────────────────────────────
+    MELS             = 64            # Number of Mel bands
+    FREQUENCY_MIN    = 50.0          # Min frequency (Hz)
+    FREQUENCY_MAX    = 4000.0        # Max frequency (Hz)
+
+    # ── Output ───────────────────────────────────────────────
+    TARGET_SIZE      = (640, 640)    # YOLO input size (W x H)
+
+    # ── Segmentation ─────────────────────────────────────────
+    SEGMENT_DURATION = 10.0          # Segment window (seconds)
+    TRIM_START       = 180.0         # Skip first N seconds (3 min)
+    TRIM_END         = 60.0          # Skip last N seconds  (1 min)
+
+    # ── Peak Detection ───────────────────────────────────────
+    THRESHOLD_FACTOR = 0.25          # RMS multiplier — lower = more sensitive
+    PEAK_DISTANCE    = 50            # Minimum samples between peaks
+    BANDPASS_LOW     = 200.0         # Bandpass lower bound (Hz)
+    BANDPASS_HIGH    = 3800.0        # Bandpass upper bound (Hz)
 
 def print_config():
     """Print current audio configuration"""

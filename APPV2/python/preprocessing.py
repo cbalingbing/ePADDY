@@ -1,106 +1,131 @@
 """
-Audio preprocessing module for ePADDY
-Handles loading, resampling, and processing of audio files
+preprocessing.py — ePADDY Main Preprocessing Entry Point
+=========================================================
+This is the file imported by classifier.py.
+
+Exposes:
+    process_audio_file(file_path, output_dir)
+        → (spectrograms, max_peaks)
+
+Mirrors the behaviour of classifier.py:
+    - Receives the LATEST .wav file path from classifier.py
+    - Processes only that one file
+    - Returns spectrograms + peak count for the classifier
+
+All heavy logic lives in the individual modules:
+    config.py          — AudioConfig parameters
+    filters.py         — bandpass_filter, normalize_waveform
+    peak_detection.py  — detect_burst_peaks
+    segmentation.py    — split_audio_segments
+    spectrogram.py     — generate_epaddy_spectrogram
+
+Usage (from classifier.py):
+    from preprocessing import process_audio_file
+    spectrograms, max_peaks = process_audio_file(latest_wav, output_dir)
 """
 
 import os
-import numpy as np
-import librosa
-import soundfile as sf
-import cv2
-from config import AudioConfig
-from spectrogram import generate_epaddy_spectrogram
-from segmentation import split_audio_segments
-import numpy as np
-from burst_peaks import detect_burst_peaks
+from typing import List, Tuple
 
-def process_audio_file(
-    file_path: str,
-    output_dir: str,
-    segment_duration: float = AudioConfig.SEGMENT_DURATION,
-    samplerate: int = AudioConfig.SR
-) -> list:
+import numpy as np
+import soundfile as sf
+import librosa
+import cv2
+import matplotlib.pyplot as plt
+
+from config      import AudioConfig
+from segmentation import split_audio_segments
+from spectrogram  import generate_epaddy_spectrogram
+
+
+def process_audio_file(file_path: str,
+                       output_dir: str,
+                       segment_duration: float = AudioConfig.SEGMENT_DURATION,
+                       visualize: bool          = False
+                       ) -> Tuple[List[np.ndarray], int]:
     """
-    Complete ePADDY preprocessing pipeline:
-    Load → Resample (if needed) → Segment → Generate Spectrograms → Save
-    
+    Full ePADDY preprocessing pipeline for a SINGLE audio file.
+    Called by classifier.py with the latest .wav recording.
+
+    Pipeline:
+        Load WAV → Mono → Resample (8 kHz) → Trim edges
+        → Detect burst peaks → Segment → Mel spectrogram → Save PNG
+
     Args:
-        file_path: path to audio file
-        output_dir: directory to save spectrograms
-        segment_duration: duration of each segment in seconds (default: 10s)
-    
+        file_path        : path to the latest .wav file
+                           (classifier.py finds this via os.path.getctime)
+        output_dir       : folder to save spectrogram PNGs
+                           (cleaned up by classifier.py after inference)
+        segment_duration : segment window in seconds  (default: 10 s)
+        visualize        : display first 3 spectrograms  (default: False)
+
     Returns:
-        List of saved spectrogram file paths
+        (spectrograms, max_peaks)
+            spectrograms : list of BGR image arrays  (one per segment)
+            max_peaks    : number of peaks / segments generated
     """
-    
-    print(f"\n{'=' * 80}")
-    print(f"Processing: {os.path.basename(file_path)}")
-    print(f"{'=' * 80}")
-    
-    # Create output directory
+    print(f"\n{'='*70}")
+    print(f"  Processing: {os.path.basename(file_path)}")
+    print(f"{'='*70}")
+
     os.makedirs(output_dir, exist_ok=True)
-    
-    # Load audio file
+
+    # ── Load audio ───────────────────────────────────────────
     audio, original_sr = sf.read(file_path)
-    
-    # Convert stereo to mono if needed
+
+    # Stereo → mono
     if len(audio.shape) > 1:
         audio = np.mean(audio, axis=1)
-        print(f"   Converted stereo to mono")
-    
-    # Resample to 44100 Hz if needed
+        print('  Converted stereo → mono')
+
+    # Resample if needed
     if original_sr != AudioConfig.SR:
-        print(f"   Resampling from {original_sr} Hz to {AudioConfig.SR} Hz")
-        audio = librosa.resample(audio, orig_sr=original_sr, target_sr=AudioConfig.SR)
+        print(f'  Resampling {original_sr} Hz → {AudioConfig.SR} Hz...')
+        audio = librosa.resample(audio,
+                                 orig_sr=original_sr,
+                                 target_sr=AudioConfig.SR)
 
-    # Split into segments
-    print(f"   Splitting audio into {segment_duration}s segments...")
-    segments = split_audio_segments(audio, AudioConfig.SR, segment_duration)
+    print(f'  Duration : {len(audio) / AudioConfig.SR:.1f}s  |  SR: {AudioConfig.SR} Hz')
 
-    max_peaks = None
-    # Count burst_peaks
-    for segment, idx in segments:
-        count_peaks = detect_burst_peaks(segment, sr=samplerate, threshold=0.25, peak_distance=50)
-        num_peaks = len(count_peaks)
-        if max_peaks is None:  # handle first iteration
-            max_peaks = num_peaks
-        elif num_peaks > max_peaks:  # compare integers
-            max_peaks = num_peaks
+    # ── Segment around burst peaks ───────────────────────────
+    segments, amp_stats = split_audio_segments(audio, AudioConfig.SR, segment_duration)
+    avg_amplitude = amp_stats.get('avg_amplitude', 0.0)
 
+    if not segments:
+        print('  No segments generated — file skipped.')
+        return [], 0, avg_amplitude
 
-
-    # Generate spectrograms
-    saved_files = []
+    max_peaks     = len(segments)
+    spectrograms  = []
     base_filename = os.path.splitext(os.path.basename(file_path))[0]
 
-    for segment, idx in segments:
-        print(f"   Processing segment {idx}...", end=" ")
-        
-        # Generate spectrogram using ePADDY parameters
-        spec_image = generate_epaddy_spectrogram(
-            audio_data=segment,
-            samplerate=AudioConfig.SR,
-            target_size=AudioConfig.TARGET_SIZE,
-        )
-        
-        # Save spectrogram
-        output_path = os.path.join(output_dir, f"{base_filename}_seg{idx:03d}.png")
-        cv2.imwrite(output_path, spec_image)
-        saved_files.append(output_path)
-        print(f"✓ Saved to {os.path.basename(output_path)}")
-    
-    print(f"   Total spectrograms generated: {len(saved_files)}")
-    
-    return saved_files,max_peaks
+    # ── Generate and save spectrograms ───────────────────────
+    for segment, idx, peak_time in segments:
+        print(f'  Spectrogram {idx:03d}  (peak @ {peak_time:.2f}s)...', end=' ')
 
+        spec     = generate_epaddy_spectrogram(segment,
+                                               AudioConfig.SR,
+                                               AudioConfig.TARGET_SIZE)
+        out_path = os.path.join(output_dir, f'{base_filename}_seg{idx:03d}.png')
+        cv2.imwrite(out_path, spec)
+        spectrograms.append(spec)
+        print(f'✓  {os.path.basename(out_path)}')
 
-if __name__ == "__main__":
-    # input_path =  r"C:\Users\i.perilla\Desktop\ePaddy\test - Copy\1_17022026_190002-iSound.wav"
-    # output_path = r"C:\Users\i.perilla\Desktop\ePaddy\output_folder"
-    # preprocessed_audio_files = process_audio_file(
-    #     file_path = input_path,
-    #     output_dir =  output_path,
-    #     segment_duration = 10.0,
-    #     samplerate = 44100
-    # )
-    print("Audio preprocessing module loaded successfully")
+    # ── Optional inline visualization ────────────────────────
+    if visualize and spectrograms:
+        n     = min(3, len(spectrograms))
+        fig, axes = plt.subplots(1, n, figsize=(6 * n, 5))
+        if n == 1:
+            axes = [axes]
+        for i, (seg, idx, pt) in enumerate(segments[:n]):
+            rgb = cv2.cvtColor(spectrograms[i], cv2.COLOR_BGR2RGB)
+            axes[i].imshow(rgb)
+            axes[i].set_title(f'Seg {idx:03d}  |  Peak @ {pt:.2f}s\n640×640 px')
+            axes[i].axis('off')
+        plt.suptitle(os.path.basename(file_path), fontsize=11)
+        plt.tight_layout()
+        plt.show()
+
+    print(f'\n  {len(spectrograms)} spectrograms saved → {output_dir}')
+    print(f'  Avg amplitude : {avg_amplitude:.6f}')
+    return spectrograms, max_peaks, avg_amplitude

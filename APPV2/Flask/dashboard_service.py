@@ -26,6 +26,7 @@ from init_database import get_connection
 _query_cache  = TTLCache(maxsize=200, ttl=300)   # 5 min  — filtered queries
 _daily_cache  = TTLCache(maxsize=50,  ttl=3600)  # 1 hour — daily summaries
 _weekly_cache = TTLCache(maxsize=20,  ttl=3600)  # 1 hour — weekly summaries
+_insect_cache = TTLCache(maxsize=100, ttl=300)   # 5 min  — insect-filtered queries
 
 
 def _cache_key(params: dict) -> str:
@@ -53,7 +54,7 @@ def _run_queries(conditions: list, params: list) -> dict:
 
     # Recent detections (top 50, newest first)
     recent = conn.execute(f"""
-        SELECT date, time, sensor_number, area,
+        SELECT date, time, sensor_number, area, area_name,
                temp, humid,
                num_detect_so, num_detect_tc, num_detect_rd,
                pct_so, pct_tc, pct_rd, est_so
@@ -98,7 +99,7 @@ def _run_queries(conditions: list, params: list) -> dict:
 
     # Latest single detection — for the summary card
     latest = conn.execute(f"""
-        SELECT date, time, sensor_number, area,
+        SELECT date, time, sensor_number, area, area_name,
                num_detect_so, num_detect_tc, num_detect_rd, est_so
         FROM detections {where}
         ORDER BY date DESC, time DESC
@@ -113,15 +114,17 @@ def _run_queries(conditions: list, params: list) -> dict:
     # Per-area aggregation — for the heatmap
     # area is stored as "lon,lat" — parsed by the frontend
     locations = conn.execute(f"""
-        SELECT area,
+        SELECT area, MAX(area_name) AS area_name,
                SUM(num_detect_so + num_detect_tc + num_detect_rd) AS total
         FROM detections {where}
         GROUP BY area
     """, params).fetchall()
 
-    # Distinct areas — for the filter dropdown
+    # Distinct friendly area names — for the filter dropdown
+    # (falls back to the coordinate string for legacy rows with no name)
     all_areas = conn.execute(
-        "SELECT DISTINCT area FROM detections ORDER BY area"
+        "SELECT DISTINCT COALESCE(NULLIF(area_name, ''), area) AS name "
+        "FROM detections ORDER BY name"
     ).fetchall()
 
     conn.close()
@@ -160,7 +163,8 @@ def get_dashboard_data(filters: dict) -> dict:
     if filters.get("end_date"):
         conditions.append("date <= ?");        params.append(filters["end_date"])
     if filters.get("area"):
-        conditions.append("area = ?");         params.append(filters["area"])
+        conditions.append("COALESCE(NULLIF(area_name, ''), area) = ?")
+        params.append(filters["area"])
     if filters.get("time_start"):
         conditions.append("time >= ?");        params.append(filters["time_start"])
     if filters.get("time_end"):
@@ -179,59 +183,178 @@ def get_dashboard_data(filters: dict) -> dict:
     return result
 
 
-def get_daily_summary(date: str = None) -> dict:
+def get_latest_24h(filters: dict) -> dict:
+    """
+    Return detections-table dashboard data for the "Latest" view.
+
+    Date window:
+        - If date_start and/or date_end are given, filter by that date range.
+        - Otherwise default to the last 24 hours (computed at call time).
+    Also respects area and insect filters.
+    """
+    from datetime import datetime, timedelta
+
+    date_start = filters.get("date_start")
+    date_end   = filters.get("date_end")
+
+    if date_start or date_end:
+        conditions, params = [], []
+        if date_start:
+            conditions.append("date >= ?"); params.append(date_start)
+        if date_end:
+            conditions.append("date <= ?"); params.append(date_end)
+    else:
+        cutoff = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+        conditions = ["(date || ' ' || time) >= ?"]
+        params     = [cutoff]
+
+    if filters.get("area"):
+        conditions.append("COALESCE(NULLIF(area_name, ''), area) = ?")
+        params.append(filters["area"])
+
+    insect = filters.get("insect", "")
+    if insect == "so":
+        conditions.append("num_detect_so > 0")
+    elif insect == "tc":
+        conditions.append("num_detect_tc > 0")
+    elif insect == "rd":
+        conditions.append("num_detect_rd > 0")
+
+    key = _cache_key({"type": "latest24h", **filters})
+    if key in _query_cache:
+        return _query_cache[key]
+
+    result = _run_queries(conditions, params)
+    _query_cache[key] = result
+    return result
+
+
+def get_daily_summary(date: str = None, area: str = None) -> dict:
     """
     Return daily summary data, cached for 1 hour.
-    If date is None, returns all daily summaries.
+    If date is None, returns all daily summaries (used for Monthly view).
+    Optional area filters by the friendly area_name (coordinate fallback).
+    Also returns the full distinct area list for the filter dropdown.
+    Rows ordered newest first — frontend uses row[0] as the 'latest' card.
     """
-    key = _cache_key({"type": "daily", "date": date or ""})
+    key = _cache_key({"type": "daily", "date": date or "", "area": area or ""})
     if key in _daily_cache:
         return _daily_cache[key]
 
     conn = get_connection()
-    where  = "WHERE date = ?" if date else ""
-    params = [date] if date else []
+    conds, params = [], []
+    if date:
+        conds.append("date = ?"); params.append(date)
+    if area:
+        conds.append("COALESCE(NULLIF(area_name, ''), area) = ?"); params.append(area)
+    where = ("WHERE " + " AND ".join(conds)) if conds else ""
 
     rows = conn.execute(f"""
-        SELECT date, area,
+        SELECT date, area, area_name,
                total_daily_so, total_daily_tc, total_daily_rd,
                ave_daily_temp, ave_daily_humid,
-               pct_so, pct_tc, pct_rd
+               pct_so, pct_tc, pct_rd,
+               total_daily_est_so
         FROM daily_summary {where}
         ORDER BY date DESC
     """, params).fetchall()
+
+    areas = conn.execute(
+        "SELECT DISTINCT COALESCE(NULLIF(area_name, ''), area) AS name "
+        "FROM daily_summary ORDER BY name"
+    ).fetchall()
     conn.close()
 
-    result = {"daily": [dict(r) for r in rows]}
+    result = {"daily": [dict(r) for r in rows], "areas": [a[0] for a in areas]}
     _daily_cache[key] = result
     return result
 
 
-def get_weekly_summary(month: str = None) -> dict:
+def get_weekly_summary(month: str = None, area: str = None) -> dict:
     """
     Return weekly summary data, cached for 1 hour.
-    If month is None, returns all weekly summaries.
+    If month is None, returns all weekly summaries (used for Weekly view).
+    Optional area filters by the friendly area_name (coordinate fallback).
+    Also returns the full distinct area list for the filter dropdown.
+    Rows ordered newest first — frontend uses row[0] as the 'latest' card.
     """
-    key = _cache_key({"type": "weekly", "month": month or ""})
+    key = _cache_key({"type": "weekly", "month": month or "", "area": area or ""})
     if key in _weekly_cache:
         return _weekly_cache[key]
 
     conn = get_connection()
-    where  = "WHERE month = ?" if month else ""
-    params = [month] if month else []
+    conds, params = [], []
+    if month:
+        conds.append("month = ?"); params.append(month)
+    if area:
+        conds.append("COALESCE(NULLIF(area_name, ''), area) = ?"); params.append(area)
+    where = ("WHERE " + " AND ".join(conds)) if conds else ""
 
     rows = conn.execute(f"""
-        SELECT month, area,
+        SELECT month, area, area_name,
                total_weekly_so, total_weekly_tc, total_weekly_rd,
                pct_so, pct_tc, pct_rd,
-               ave_weekly_temp, ave_weekly_humid
+               ave_weekly_temp, ave_weekly_humid,
+               total_weekly_est_so
         FROM weekly_summary {where}
         ORDER BY month DESC
     """, params).fetchall()
+
+    areas = conn.execute(
+        "SELECT DISTINCT COALESCE(NULLIF(area_name, ''), area) AS name "
+        "FROM weekly_summary ORDER BY name"
+    ).fetchall()
     conn.close()
 
-    result = {"weekly": [dict(r) for r in rows]}
+    result = {"weekly": [dict(r) for r in rows], "areas": [a[0] for a in areas]}
     _weekly_cache[key] = result
+    return result
+
+
+def get_insect_data(period: str, insect: str, area: str = "") -> dict:
+    """
+    Query detections filtered by insect type and period window.
+    Period window:
+        latest  — last 24 hours
+        weekly  — last 7 days rolling
+        monthly — current calendar month
+    Always queries detections table (summary tables have no per-insect rows).
+    Cached for 5 minutes.
+    """
+    from datetime import datetime, timedelta
+
+    key = _cache_key({"type": "insect", "period": period, "insect": insect, "area": area})
+    if key in _insect_cache:
+        return _insect_cache[key]
+
+    conditions, params = [], []
+
+    if period == "latest":
+        cutoff = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+        conditions.append("(date || ' ' || time) >= ?")
+        params.append(cutoff)
+    elif period == "weekly":
+        cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        conditions.append("date >= ?")
+        params.append(cutoff)
+    elif period == "monthly":
+        cutoff = datetime.now().strftime("%Y-%m")
+        conditions.append("strftime('%Y-%m', date) = ?")
+        params.append(cutoff)
+
+    if insect == "so":
+        conditions.append("num_detect_so > 0")
+    elif insect == "tc":
+        conditions.append("num_detect_tc > 0")
+    elif insect == "rd":
+        conditions.append("num_detect_rd > 0")
+
+    if area:
+        conditions.append("COALESCE(NULLIF(area_name, ''), area) = ?")
+        params.append(area)
+
+    result = _run_queries(conditions, params)
+    _insect_cache[key] = result
     return result
 
 
@@ -241,3 +364,4 @@ def invalidate_cache():
     _query_cache.clear()
     _daily_cache.clear()
     _weekly_cache.clear()
+    _insect_cache.clear()

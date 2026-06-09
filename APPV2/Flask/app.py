@@ -22,8 +22,10 @@ except ImportError as _e:
 
 from dashboard_service import (
     get_dashboard_data,
+    get_latest_24h,
     get_daily_summary,
     get_weekly_summary,
+    get_insect_data,
     invalidate_cache,
 )
 
@@ -127,6 +129,22 @@ def results():
 
 
 # ── Dashboard API Routes ──────────────────────────────────────────────────────
+@app.route("/api/dashboard/latest")
+def dashboard_latest():
+    """Last 24 h of detections. Supports area, time_start, time_end, insect filters."""
+    try:
+        filters = {
+            "area"      : sanitize(request.args.get("area",       "")),
+            "date_start": sanitize(request.args.get("date_start", "")),
+            "date_end"  : sanitize(request.args.get("date_end",   "")),
+            "insect"    : sanitize(request.args.get("insect",     "")),
+        }
+        return jsonify(get_latest_24h(filters))
+    except Exception as e:
+        log_error("dashboard_latest", e)
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/dashboard")
 def dashboard_api():
     try:
@@ -148,7 +166,8 @@ def dashboard_api():
 def dashboard_daily():
     try:
         date = sanitize(request.args.get("date", "")) or None
-        return jsonify(get_daily_summary(date))
+        area = sanitize(request.args.get("area", "")) or None
+        return jsonify(get_daily_summary(date, area))
     except Exception as e:
         log_error("dashboard_daily", e)
         return jsonify({"error": str(e)}), 500
@@ -158,9 +177,25 @@ def dashboard_daily():
 def dashboard_weekly():
     try:
         month = sanitize(request.args.get("month", "")) or None
-        return jsonify(get_weekly_summary(month))
+        area  = sanitize(request.args.get("area", "")) or None
+        return jsonify(get_weekly_summary(month, area))
     except Exception as e:
         log_error("dashboard_weekly", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/dashboard/insect")
+def dashboard_insect():
+    """Insect-filtered detections for a given period window. Used by all period modes."""
+    try:
+        period = sanitize(request.args.get("period", "latest"))
+        insect = sanitize(request.args.get("insect", ""))
+        area   = sanitize(request.args.get("area",   ""))
+        if not insect:
+            return jsonify({"error": "insect param required (so/tc/rd)"}), 400
+        return jsonify(get_insect_data(period, insect, area))
+    except Exception as e:
+        log_error("dashboard_insect", e)
         return jsonify({"error": str(e)}), 500
 
 
@@ -230,6 +265,25 @@ def receive_results():
     except Exception as e:
         log_error("receive_results", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Error handlers ──────────────────────────────────────────────────────────
+# API routes get a clean JSON error; page routes get a simple message instead
+# of Werkzeug's raw traceback. (Note: with debug=True, Flask's debugger still
+# intercepts 500s — set debug=false in production so these apply.)
+@app.errorhandler(404)
+def handle_404(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Not found"}), 404
+    return "<h1>404 — Page not found</h1>", 404
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    log_error("500", e)
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Internal server error"}), 500
+    return "<h1>500 — Something went wrong</h1>", 500
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

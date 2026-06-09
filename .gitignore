@@ -42,6 +42,7 @@ APPV2/static/spec_images/
 APPV2/static/graphs/
 APPV2/python/predictions.csv
 APPV2/logs/
+APPV2/Database/seed_db.py
 
 # Machine-specific config (contains local paths, node name, device name, Samba server)
 APPV2/config.ini
@@ -49,6 +50,16 @@ APPV2/config.ini
 # RPi hardware config (machine-specific boot/device settings)
 setup_script_rpi0/config.txt
 
+# DB of Epaddy
+APPV2/sqlite
+
 # Retrieve audio folder
 retrieve_audio/
 RPI5 sensor/
+
+
+# Email credentials — never commit
+app_pass.txt
+*app_pass*
+*.cred
+credentials/

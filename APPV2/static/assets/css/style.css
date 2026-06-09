@@ -733,6 +733,25 @@ body {
     align-self: center;
 }
 
+/* Lottie full-page loading overlay */
+.db-lottie-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.75);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+}
+.db-lottie-text {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    color: #2D772D;
+    font-weight: 500;
+}
+
 /* Summary cards */
 .db-card {
     background: #fff;
