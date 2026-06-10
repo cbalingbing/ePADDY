@@ -81,9 +81,13 @@ def _analyze_wav(wav_file, output_folder, detector):
     return base
 
 
-def classify(input_folder, output_folder, model_path):
+def classify(input_folder, output_folder, model_path, latest_only=False):
     """
-    Run YOLO detection over ALL .wav files in input_folder.
+    Run YOLO detection over the .wav files in input_folder.
+
+    latest_only=False : process every .wav (default — used by the web upload).
+    latest_only=True  : process only the most recently created .wav
+                        (used by the cron email_sender).
 
     Returns a list of per-file prediction dicts (empty list if no .wav files).
     Pure prediction — no DB writes, no email.
@@ -95,6 +99,9 @@ def classify(input_folder, output_folder, model_path):
     ]
     if not wav_files:
         return []
+
+    if latest_only:
+        wav_files = [max(wav_files, key=os.path.getctime)]
 
     os.makedirs(output_folder, exist_ok=True)
     detector = YOLOClassifier(model_path)

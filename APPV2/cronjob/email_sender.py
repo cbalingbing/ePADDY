@@ -73,6 +73,19 @@ CSV_HEADER = ["Date", "Time", "Sensor", "Area_Name", "Coordinates",
               "Max_Peaks", "Est_SO", "Temp", "Humid"]
 
 
+def clear_folder(path):
+    """Delete all files in a folder (used to clear leftover spectrograms)."""
+    if not os.path.isdir(path):
+        return
+    for fn in os.listdir(path):
+        fp = os.path.join(path, fn)
+        if os.path.isfile(fp):
+            try:
+                os.remove(fp)
+            except OSError:
+                pass
+
+
 def log_to_csv(rows):
     """Append one row per processed file to the CSV log (writes header once)."""
     os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
@@ -120,8 +133,10 @@ def send_email(body):
 def main():
     now = datetime.now()
     try:
+        clear_folder(AUDIO_OUTPUT)                   # pre-clean: drop leftovers from a crashed run
         init_db()                                   # ensure tables exist (+ migrations)
-        results = classify(AUDIO_INPUT, AUDIO_OUTPUT, MODEL_PATH)
+        # Cron processes only the LATEST recording (latest_only=True)
+        results = classify(AUDIO_INPUT, AUDIO_OUTPUT, MODEL_PATH, latest_only=True)
 
         rows = []
         for r in results:
@@ -160,6 +175,8 @@ def main():
         print(f"[{now}] Done. {len(results)} file(s) processed.")
     except Exception as e:
         print(f"[{now}] Error: {e}")
+    finally:
+        clear_folder(AUDIO_OUTPUT)                   # post-clean: leave no spectrograms behind
 
 
 if __name__ == "__main__":
