@@ -22,10 +22,30 @@ Each dict (one per processed .wav):
 """
 
 import os
+import re
+from datetime import datetime
 from preprocessing import process_audio_file
 from inference import YOLOClassifier
 
 ALL_KNOWN_CLASSES = ['R_Dominica', 'S_Oryzae', 'T_Castaneum']
+
+# Recording timestamp embedded in the filename: {node}_{DDMMYYYY_HHMMSS}-iSound.wav
+_TS_RE = re.compile(r'_(\d{8}_\d{6})-iSound\.wav$', re.IGNORECASE)
+
+
+def _recording_time(path):
+    """Sort key for 'latest' selection: the REAL datetime parsed from the
+    filename (DDMMYYYY_HHMMSS), not file ctime. Files copied onto the device
+    (e.g. via a shared drive) get a fresh ctime that doesn't reflect when they
+    were recorded, so ctime would wrongly pick a stale recording. Falls back to
+    ctime only when the name doesn't match the expected pattern."""
+    m = _TS_RE.search(os.path.basename(path))
+    if m:
+        try:
+            return datetime.strptime(m.group(1), "%d%m%Y_%H%M%S").timestamp()
+        except ValueError:
+            pass
+    return os.path.getctime(path)
 
 
 def _analyze_wav(wav_file, output_folder, detector):
@@ -86,8 +106,10 @@ def classify(input_folder, output_folder, model_path, latest_only=False):
     Run YOLO detection over the .wav files in input_folder.
 
     latest_only=False : process every .wav (default — used by the web upload).
-    latest_only=True  : process only the most recently created .wav
-                        (used by the cron email_sender).
+    latest_only=True  : process only the newest recording, chosen by the
+                        timestamp in the filename (not file ctime), so a stale
+                        file copied in via a shared drive can't win. Used by the
+                        cron email_sender.
 
     Returns a list of per-file prediction dicts (empty list if no .wav files).
     Pure prediction — no DB writes, no email.
@@ -101,7 +123,7 @@ def classify(input_folder, output_folder, model_path, latest_only=False):
         return []
 
     if latest_only:
-        wav_files = [max(wav_files, key=os.path.getctime)]
+        wav_files = [max(wav_files, key=_recording_time)]
 
     os.makedirs(output_folder, exist_ok=True)
     detector = YOLOClassifier(model_path)
