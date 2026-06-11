@@ -6,7 +6,7 @@ against the sensor CSV written by the RPi 0 node (recordv2.py).
 
 Audio filename format : {node_id}_{timestamp}-iSound.wav
                         e.g.  1_16022026_140002-iSound.wav
-CSV row format        : timestamp,node_id,filename,temperature,humidity
+CSV row format        : DDMMYYYY_HHMMSS,node_id,filepath,temperature,humidity  (no header row)
                         e.g.  16022026_140002,1,/mnt/.../1_16022026_140002-iSound.wav,28.50,75.30
 """
 
@@ -67,11 +67,13 @@ def get_sensor_reading(audio_filepath: str, csv_path: str):
 
     matched_row = None
     with open(csv_path, newline="") as f:
-        reader = csv.DictReader(f)
+        reader = csv.reader(f)
         for row in reader:
-            csv_node     = row.get("node_id", "").strip()
-            csv_filename = row.get("filename", "").strip()
-            if csv_node == node_id and key in csv_filename:
+            if len(row) < 5:
+                continue
+            csv_node     = row[1].strip()
+            csv_filepath = row[2].strip()
+            if csv_node == node_id and key in csv_filepath:
                 matched_row = row
 
     if matched_row is None:
@@ -80,9 +82,9 @@ def get_sensor_reading(audio_filepath: str, csv_path: str):
         return None, None
 
     try:
-        temp  = float(matched_row["temperature"])
-        humid = float(matched_row["humidity"])
-    except (KeyError, ValueError) as e:
+        temp  = float(matched_row[3])
+        humid = float(matched_row[4])
+    except (IndexError, ValueError) as e:
         print(f"[sensor_lookup] Could not parse temp/humid: {e}")
         return None, None
 
