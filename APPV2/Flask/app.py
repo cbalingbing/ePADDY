@@ -25,6 +25,7 @@ from dashboard_service import (
     get_latest_24h,
     get_daily_summary,
     get_weekly_summary,
+    get_monthly_summary,
     get_insect_data,
     invalidate_cache,
 )
@@ -176,11 +177,22 @@ def dashboard_daily():
 @app.route("/api/dashboard/weekly")
 def dashboard_weekly():
     try:
-        month = sanitize(request.args.get("month", "")) or None
-        area  = sanitize(request.args.get("area", "")) or None
-        return jsonify(get_weekly_summary(month, area))
+        week = sanitize(request.args.get("week", "")) or None
+        area = sanitize(request.args.get("area", "")) or None
+        return jsonify(get_weekly_summary(week, area))
     except Exception as e:
         log_error("dashboard_weekly", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/dashboard/monthly")
+def dashboard_monthly():
+    try:
+        month = sanitize(request.args.get("month", "")) or None
+        area  = sanitize(request.args.get("area", "")) or None
+        return jsonify(get_monthly_summary(month, area))
+    except Exception as e:
+        log_error("dashboard_monthly", e)
         return jsonify({"error": str(e)}), 500
 
 

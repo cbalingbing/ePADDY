@@ -60,8 +60,9 @@
                         <option value="24h">Last 24 hours</option>
                         <option value="7d">Last 7 days</option>
                         <option value="30d">Last 30 days</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="daily">Daily Summary</option>
+                        <option value="weekly">Weekly Summary</option>
+                        <option value="monthly">Monthly Summary</option>
                         <option value="custom">Custom range</option>
                     </select>
                 </div>
@@ -382,9 +383,9 @@
         const insect = document.getElementById('insectFilter').value;
         const preset = document.getElementById('rangePreset').value;
 
-        // Weekly / Monthly read the summary tables; everything else (24h, 7d,
-        // 30d, custom) reads the detections table.
-        if (preset === 'weekly' || preset === 'monthly') {
+        // Daily / Weekly / Monthly read the precomputed summary tables;
+        // everything else (24h, 7d, 30d, custom) reads the detections table.
+        if (preset === 'daily' || preset === 'weekly' || preset === 'monthly') {
             return loadSummary(myToken, preset, area, insect);
         }
 
@@ -420,16 +421,36 @@
         renderLatest(data, insect);
     }
 
-    // ── Weekly / Monthly summary view ─────────────────────────────────────────
-    // Weekly  → weekly_summary table (month buckets)
-    // Monthly → daily_summary table (daily rows)
-    async function loadSummary(myToken, preset, area, insect) {
-        const isWeekly = preset === 'weekly';
-        const mode     = isWeekly ? 'weekly' : 'monthly';
-        const url      = (isWeekly ? '/api/dashboard/weekly' : '/api/dashboard/daily')
-                       + `?${new URLSearchParams({ area }).toString()}`;
+    // ── Summary field resolver ────────────────────────────────────────────────
+    // Maps a summary mode to its column names + label, so the render helpers
+    // don't hardcode daily-vs-weekly. mode ∈ 'daily' | 'weekly' | 'monthly'.
+    function summaryFields(mode) {
+        return {
+            so   : `total_${mode}_so`,
+            tc   : `total_${mode}_tc`,
+            rd   : `total_${mode}_rd`,
+            est  : `total_${mode}_est_so`,
+            temp : `ave_${mode}_temp`,
+            humid: `ave_${mode}_humid`,
+            label: mode === 'weekly' ? 'week'  : mode === 'monthly' ? 'month' : 'date',
+            head : mode === 'weekly' ? 'Week'  : mode === 'monthly' ? 'Month' : 'Date',
+        };
+    }
 
-        const baseKey = JSON.stringify({ src: 'sum', preset, area });
+    // ── Daily / Weekly / Monthly summary view ──────────────────────────────────
+    // daily   → daily_summary   (per day)
+    // weekly  → weekly_summary  (per ISO week)
+    // monthly → monthly_summary (per month)
+    const SUMMARY_ENDPOINT = {
+        daily  : '/api/dashboard/daily',
+        weekly : '/api/dashboard/weekly',
+        monthly: '/api/dashboard/monthly',
+    };
+    async function loadSummary(myToken, mode, area, insect) {
+        const url = SUMMARY_ENDPOINT[mode]
+                  + `?${new URLSearchParams({ area }).toString()}`;
+
+        const baseKey = JSON.stringify({ src: 'sum', mode, area });
         let data = jsCache.get(baseKey);
         if (!data) {
             showLoading(true);
@@ -452,12 +473,13 @@
         // Keep the Area dropdown populated from the summary table's areas
         safeRender('area-dropdown', () => populateAreaDropdown(data.areas));
 
-        const rows       = isWeekly ? (data.weekly || []) : (data.daily || []);
-        const labelField = isWeekly ? 'month' : 'date';
+        const F          = summaryFields(mode);
+        const rows       = data[mode] || [];   // data.daily / data.weekly / data.monthly
+        const labelField = F.label;
 
         if (insect) {
             // Table: filter summary rows to the chosen insect (client-side)
-            const totalField = isWeekly ? `total_weekly_${insect}` : `total_daily_${insect}`;
+            const totalField  = `total_${mode}_${insect}`;
             const summaryRows = rows.filter(r => (r[totalField] || 0) > 0);
 
             // Cards/charts: insect-specific detections for this period window
@@ -573,6 +595,8 @@
     // WEEKLY / MONTHLY — uses summary table shape
     // ══════════════════════════════════════════════════════════════════════════
     function renderSummary(rows, labelField, mode) {
+        const F = summaryFields(mode);   // mode → column names + label
+
         // No insect filter on this path → EST_SO is always visible (restore it in
         // case a previous TC/RD filter had hidden the card + trend chart).
         document.getElementById('latestEstBlock').style.display = '';
@@ -581,23 +605,17 @@
         // ── Latest card — first row (newest) ──────────────────────────────────
         const newest = rows[0] || null;
         if (newest) {
-            const isWeekly = mode === 'weekly';
-            const soField  = isWeekly ? 'total_weekly_so'     : 'total_daily_so';
-            const tcField  = isWeekly ? 'total_weekly_tc'     : 'total_daily_tc';
-            const rdField  = isWeekly ? 'total_weekly_rd'     : 'total_daily_rd';
-            const estField = isWeekly ? 'total_weekly_est_so' : 'total_daily_est_so';
-
             document.getElementById('latestDatetime').textContent =
-                newest[labelField];                         // month (2026-06) or date (2026-06-01)
+                newest[labelField];                  // date / week / month label
             document.getElementById('latestNode').textContent  = '';
             document.getElementById('latestArea').textContent  =
                 `Area: ${newest.area || '—'}`;
             document.getElementById('latestEstSo').textContent =
-                (newest[estField] ?? '—').toLocaleString();
+                (newest[F.est] ?? '—').toLocaleString();
 
             const badges = document.getElementById('latestBadges');
             badges.innerHTML = '';
-            [['so', soField], ['tc', tcField], ['rd', rdField]].forEach(([k, f]) => {
+            [['so', F.so], ['tc', F.tc], ['rd', F.rd]].forEach(([k, f]) => {
                 if ((newest[f] || 0) > 0)
                     badges.innerHTML +=
                         `<span class="db-badge" style="background:${COLORS[k]}">
@@ -611,12 +629,8 @@
         }
 
         // ── Total / Dominant — aggregate all rows ─────────────────────────────
-        const isWeekly = mode === 'weekly';
-        const soF  = isWeekly ? 'total_weekly_so' : 'total_daily_so';
-        const tcF  = isWeekly ? 'total_weekly_tc' : 'total_daily_tc';
-        const rdF  = isWeekly ? 'total_weekly_rd' : 'total_daily_rd';
         const sum  = (f) => rows.reduce((a, r) => a + (r[f] || 0), 0);
-        const totalSo = sum(soF), totalTc = sum(tcF), totalRd = sum(rdF);
+        const totalSo = sum(F.so), totalTc = sum(F.tc), totalRd = sum(F.rd);
 
         document.getElementById('totalRecords').textContent =
             (totalSo + totalTc + totalRd).toLocaleString();
@@ -632,12 +646,9 @@
         safeRender('donut', () => renderDonut(totalSo, totalTc, totalRd));
 
         // ── Temp & Humidity (each chart isolated) ─────────────────────────────
-        const tempF = isWeekly ? 'ave_weekly_temp'  : 'ave_daily_temp';
-        const humF  = isWeekly ? 'ave_weekly_humid' : 'ave_daily_humid';
-        const estF  = isWeekly ? 'total_weekly_est_so' : 'total_daily_est_so';
-        safeRender('temp-chart', () => renderTempChart(rows.slice().reverse().map(r => ({ label: r[labelField], v: r[tempF] }))));
-        safeRender('humid-chart', () => renderHumChart(rows.slice().reverse().map(r => ({ label: r[labelField], v: r[humF]  }))));
-        safeRender('est-chart', () => renderEstChart(rows.slice().reverse().map(r => ({ label: r[labelField], v: r[estF] || 0 }))));
+        safeRender('temp-chart', () => renderTempChart(rows.slice().reverse().map(r => ({ label: r[labelField], v: r[F.temp] }))));
+        safeRender('humid-chart', () => renderHumChart(rows.slice().reverse().map(r => ({ label: r[labelField], v: r[F.humid] }))));
+        safeRender('est-chart', () => renderEstChart(rows.slice().reverse().map(r => ({ label: r[labelField], v: r[F.est] || 0 }))));
 
         // ── Heatmap — aggregate totals per area ───────────────────────────────
         safeRender('heatmap', () => {
@@ -646,7 +657,7 @@
                 if (!r.area) return;
                 if (!areaMap[r.area])
                     areaMap[r.area] = { area: r.area, area_name: r.area_name, total: 0 };
-                areaMap[r.area].total += (r[soF] || 0) + (r[tcF] || 0) + (r[rdF] || 0);
+                areaMap[r.area].total += (r[F.so] || 0) + (r[F.tc] || 0) + (r[F.rd] || 0);
             });
             renderHeatmap(Object.values(areaMap));
         });
@@ -720,18 +731,15 @@
     // ── Summary table (Weekly / Monthly mode) ────────────────────────────────
     // insect (''|'so'|'tc'|'rd'): when set, only that insect's count + % columns show.
     function renderSummaryTable(rows, mode, insect = '') {
-        const isWeekly  = mode === 'weekly';
-        const labelHead = isWeekly ? 'Month' : 'Date';
-        const soF  = isWeekly ? 'total_weekly_so'     : 'total_daily_so';
-        const tcF  = isWeekly ? 'total_weekly_tc'     : 'total_daily_tc';
-        const rdF  = isWeekly ? 'total_weekly_rd'     : 'total_daily_rd';
-        const estF = isWeekly ? 'total_weekly_est_so' : 'total_daily_est_so';
-        const tmpF = isWeekly ? 'ave_weekly_temp'     : 'ave_daily_temp';
-        const humF = isWeekly ? 'ave_weekly_humid'    : 'ave_daily_humid';
-        const labF = isWeekly ? 'month'               : 'date';
+        const F         = summaryFields(mode);   // mode → column names + label
+        const labelHead = F.head;                // 'Date' | 'Week' | 'Month'
+        const estF = F.est;
+        const tmpF = F.temp;
+        const humF = F.humid;
+        const labF = F.label;
 
         // Column maps — restrict to the selected insect, or show all three
-        const COUNT_F = { so: soF, tc: tcF, rd: rdF };
+        const COUNT_F = { so: F.so, tc: F.tc, rd: F.rd };
         const PCT_F   = { so: 'pct_so', tc: 'pct_tc', rd: 'pct_rd' };
         const HEAD    = { so: 'SO', tc: 'TC', rd: 'RD' };
         const cols    = insect ? [insect] : ['so', 'tc', 'rd'];
@@ -796,10 +804,7 @@
 
     // ── Detections line chart (Weekly / Monthly — period buckets) ────────────
     function renderGroupedBar(rows, labelField, mode) {
-        const isWeekly = mode === 'weekly';
-        const soF = isWeekly ? 'total_weekly_so' : 'total_daily_so';
-        const tcF = isWeekly ? 'total_weekly_tc' : 'total_daily_tc';
-        const rdF = isWeekly ? 'total_weekly_rd' : 'total_daily_rd';
+        const F = summaryFields(mode);   // mode → column names
         const ordered = rows.slice().reverse();
         const labels  = ordered.map(r => r[labelField]);
 
@@ -809,9 +814,9 @@
             data: {
                 labels,
                 datasets: [
-                    { label:'S. Oryzae',    data:ordered.map(r=>r[soF]||0), borderColor:COLORS.so, backgroundColor:COLORS.so+'33', tension:0.3, pointRadius:3, fill:false },
-                    { label:'T. Castaneum', data:ordered.map(r=>r[tcF]||0), borderColor:COLORS.tc, backgroundColor:COLORS.tc+'33', tension:0.3, pointRadius:3, fill:false },
-                    { label:'R. Dominica',  data:ordered.map(r=>r[rdF]||0), borderColor:COLORS.rd, backgroundColor:COLORS.rd+'33', tension:0.3, pointRadius:3, fill:false },
+                    { label:'S. Oryzae',    data:ordered.map(r=>r[F.so]||0), borderColor:COLORS.so, backgroundColor:COLORS.so+'33', tension:0.3, pointRadius:3, fill:false },
+                    { label:'T. Castaneum', data:ordered.map(r=>r[F.tc]||0), borderColor:COLORS.tc, backgroundColor:COLORS.tc+'33', tension:0.3, pointRadius:3, fill:false },
+                    { label:'R. Dominica',  data:ordered.map(r=>r[F.rd]||0), borderColor:COLORS.rd, backgroundColor:COLORS.rd+'33', tension:0.3, pointRadius:3, fill:false },
                 ],
             },
             options: {

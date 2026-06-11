@@ -50,8 +50,22 @@ DAILY_SELECT = f"""
     GROUP BY date, area
 """
 
-# month (YYYY-MM) × area → weekly_summary  (area_name carried via MAX)
+# week (YYYY-W##) × area → weekly_summary  (true ISO-ish week; %W = Monday-first,
+# portable across older SQLite builds that lack %V). area_name carried via MAX.
 WEEKLY_SELECT = f"""
+    SELECT strftime('%Y-W%W', date) AS week, area, MAX(area_name) AS area_name,
+           SUM(num_detect_so), SUM(num_detect_tc), SUM(num_detect_rd),
+           ROUND(100.0 * SUM(num_detect_so) / NULLIF({_TOTAL}, 0), 2),
+           ROUND(100.0 * SUM(num_detect_tc) / NULLIF({_TOTAL}, 0), 2),
+           ROUND(100.0 * SUM(num_detect_rd) / NULLIF({_TOTAL}, 0), 2),
+           ROUND(AVG(temp), 2), ROUND(AVG(humid), 2),
+           SUM(est_so)
+    FROM detections
+    GROUP BY week, area
+"""
+
+# month (YYYY-MM) × area → monthly_summary  (area_name carried via MAX)
+MONTHLY_SELECT = f"""
     SELECT strftime('%Y-%m', date) AS month, area, MAX(area_name) AS area_name,
            SUM(num_detect_so), SUM(num_detect_tc), SUM(num_detect_rd),
            ROUND(100.0 * SUM(num_detect_so) / NULLIF({_TOTAL}, 0), 2),
@@ -71,28 +85,39 @@ DAILY_INSERT = """
 
 WEEKLY_INSERT = """
     INSERT OR REPLACE INTO weekly_summary
-        (month, area, area_name, total_weekly_so, total_weekly_tc, total_weekly_rd,
+        (week, area, area_name, total_weekly_so, total_weekly_tc, total_weekly_rd,
          pct_so, pct_tc, pct_rd, ave_weekly_temp, ave_weekly_humid, total_weekly_est_so)
+"""
+
+MONTHLY_INSERT = """
+    INSERT OR REPLACE INTO monthly_summary
+        (month, area, area_name, total_monthly_so, total_monthly_tc, total_monthly_rd,
+         pct_so, pct_tc, pct_rd, ave_monthly_temp, ave_monthly_humid, total_monthly_est_so)
 """
 
 
 def dry_run():
     init_db()                                # ensure schema/migrations (adds cols only)
     conn = get_connection()
-    det    = conn.execute("SELECT COUNT(*) FROM detections").fetchone()[0]
-    daily  = conn.execute(DAILY_SELECT).fetchall()
-    weekly = conn.execute(WEEKLY_SELECT).fetchall()
+    det     = conn.execute("SELECT COUNT(*) FROM detections").fetchone()[0]
+    daily   = conn.execute(DAILY_SELECT).fetchall()
+    weekly  = conn.execute(WEEKLY_SELECT).fetchall()
+    monthly = conn.execute(MONTHLY_SELECT).fetchall()
     conn.close()
 
     print("── DRY RUN (no writes) ─────────────────────────────")
-    print(f"detections rows          : {det}")
-    print(f"daily_summary  would be  : {len(daily)} rows  (date x area)")
-    print(f"weekly_summary would be  : {len(weekly)} rows (month x area)")
+    print(f"detections rows           : {det}")
+    print(f"daily_summary  would be   : {len(daily)} rows  (date x area)")
+    print(f"weekly_summary would be   : {len(weekly)} rows  (week x area)")
+    print(f"monthly_summary would be  : {len(monthly)} rows (month x area)")
     print("\nSample daily rows:")
     for r in daily[:5]:
         print("  ", tuple(r))
     print("\nSample weekly rows:")
     for r in weekly[:5]:
+        print("  ", tuple(r))
+    print("\nSample monthly rows:")
+    for r in monthly[:5]:
         print("  ", tuple(r))
     if det == 0:
         print("\n[!] detections table is EMPTY — nothing to aggregate yet.")
@@ -101,14 +126,17 @@ def dry_run():
 def build():
     init_db()                                # ensure tables + migrations exist
     conn = get_connection()
-    conn.execute(DAILY_INSERT  + DAILY_SELECT)
-    conn.execute(WEEKLY_INSERT + WEEKLY_SELECT)
+    conn.execute(DAILY_INSERT   + DAILY_SELECT)
+    conn.execute(WEEKLY_INSERT  + WEEKLY_SELECT)
+    conn.execute(MONTHLY_INSERT + MONTHLY_SELECT)
     conn.commit()
     d = conn.execute("SELECT COUNT(*) FROM daily_summary").fetchone()[0]
     w = conn.execute("SELECT COUNT(*) FROM weekly_summary").fetchone()[0]
+    m = conn.execute("SELECT COUNT(*) FROM monthly_summary").fetchone()[0]
     conn.close()
-    print(f"daily_summary : {d} rows")
-    print(f"weekly_summary: {w} rows")
+    print(f"daily_summary  : {d} rows")
+    print(f"weekly_summary : {w} rows")
+    print(f"monthly_summary: {m} rows")
     _invalidate_cache()
 
 

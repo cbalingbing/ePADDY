@@ -29,6 +29,19 @@ def _ensure_column(conn, table, column, definition):
 def init_db():
     try:
         conn = get_connection()
+
+        # ── Pre-migration: weekly_summary re-keyed month → week ──────────
+        # The old weekly_summary was keyed by `month` (it was monthly data
+        # mislabeled). It's now a TRUE per-ISO-week table keyed by `week`,
+        # and the monthly logic moved to the new monthly_summary table.
+        # Summary tables are derived from detections (rebuilt by
+        # build_summaries.py), so dropping the stale one is loss-free — the
+        # new CREATE below recreates it with the correct `week` column.
+        _wk_cols = [r["name"] for r in conn.execute("PRAGMA table_info(weekly_summary)")]
+        if _wk_cols and "week" not in _wk_cols:        # old schema present
+            conn.execute("DROP TABLE weekly_summary")
+            print("[db] migrated: rebuilt weekly_summary (month -> week)")
+
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS detections (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,7 +80,7 @@ def init_db():
 
             CREATE TABLE IF NOT EXISTS weekly_summary (
                 id                   INTEGER PRIMARY KEY AUTOINCREMENT,
-                month                TEXT NOT NULL,
+                week                 TEXT NOT NULL,          -- ISO-ish week, e.g. '2026-W23'
                 area                 TEXT NOT NULL,
                 area_name            TEXT,
                 total_weekly_so      INTEGER DEFAULT 0,
@@ -79,6 +92,23 @@ def init_db():
                 ave_weekly_temp      REAL DEFAULT 0.0,
                 ave_weekly_humid     REAL DEFAULT 0.0,
                 total_weekly_est_so  INTEGER DEFAULT 0,
+                UNIQUE(week, area)
+            );
+
+            CREATE TABLE IF NOT EXISTS monthly_summary (
+                id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                month                 TEXT NOT NULL,         -- calendar month, e.g. '2026-06'
+                area                  TEXT NOT NULL,
+                area_name             TEXT,
+                total_monthly_so      INTEGER DEFAULT 0,
+                total_monthly_tc      INTEGER DEFAULT 0,
+                total_monthly_rd      INTEGER DEFAULT 0,
+                pct_so                REAL DEFAULT 0.0,
+                pct_tc                REAL DEFAULT 0.0,
+                pct_rd                REAL DEFAULT 0.0,
+                ave_monthly_temp      REAL DEFAULT 0.0,
+                ave_monthly_humid     REAL DEFAULT 0.0,
+                total_monthly_est_so  INTEGER DEFAULT 0,
                 UNIQUE(month, area)
             );
 
@@ -94,9 +124,13 @@ def init_db():
         _ensure_column(conn, "weekly_summary", "total_weekly_est_so", "INTEGER DEFAULT 0")
 
         # area_name — friendly location label (area column keeps the coordinates)
-        _ensure_column(conn, "detections",     "area_name", "TEXT")
-        _ensure_column(conn, "daily_summary",  "area_name", "TEXT")
-        _ensure_column(conn, "weekly_summary", "area_name", "TEXT")
+        _ensure_column(conn, "detections",      "area_name", "TEXT")
+        _ensure_column(conn, "daily_summary",   "area_name", "TEXT")
+        _ensure_column(conn, "weekly_summary",  "area_name", "TEXT")
+        _ensure_column(conn, "monthly_summary", "area_name", "TEXT")
+
+        # monthly_summary est column (mirrors daily/weekly)
+        _ensure_column(conn, "monthly_summary", "total_monthly_est_so", "INTEGER DEFAULT 0")
 
         conn.commit()
         conn.close()

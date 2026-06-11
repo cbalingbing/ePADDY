@@ -23,10 +23,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../Database"))
 from init_database import get_connection
 
 # ── Cache buckets ─────────────────────────────────────────────────────────────
-_query_cache  = TTLCache(maxsize=200, ttl=300)   # 5 min  — filtered queries
-_daily_cache  = TTLCache(maxsize=50,  ttl=3600)  # 1 hour — daily summaries
-_weekly_cache = TTLCache(maxsize=20,  ttl=3600)  # 1 hour — weekly summaries
-_insect_cache = TTLCache(maxsize=100, ttl=300)   # 5 min  — insect-filtered queries
+_query_cache   = TTLCache(maxsize=200, ttl=300)   # 5 min  — filtered queries
+_daily_cache   = TTLCache(maxsize=50,  ttl=3600)  # 1 hour — daily summaries
+_weekly_cache  = TTLCache(maxsize=20,  ttl=3600)  # 1 hour — weekly summaries
+_monthly_cache = TTLCache(maxsize=20,  ttl=3600)  # 1 hour — monthly summaries
+_insect_cache  = TTLCache(maxsize=100, ttl=300)   # 5 min  — insect-filtered queries
 
 
 def _cache_key(params: dict) -> str:
@@ -270,34 +271,34 @@ def get_daily_summary(date: str = None, area: str = None) -> dict:
     return result
 
 
-def get_weekly_summary(month: str = None, area: str = None) -> dict:
+def get_weekly_summary(week: str = None, area: str = None) -> dict:
     """
-    Return weekly summary data, cached for 1 hour.
-    If month is None, returns all weekly summaries (used for Weekly view).
+    Return weekly summary data (true per-ISO-week), cached for 1 hour.
+    If week is None, returns all weekly summaries (used for Weekly view).
     Optional area filters by the friendly area_name (coordinate fallback).
     Also returns the full distinct area list for the filter dropdown.
     Rows ordered newest first — frontend uses row[0] as the 'latest' card.
     """
-    key = _cache_key({"type": "weekly", "month": month or "", "area": area or ""})
+    key = _cache_key({"type": "weekly", "week": week or "", "area": area or ""})
     if key in _weekly_cache:
         return _weekly_cache[key]
 
     conn = get_connection()
     conds, params = [], []
-    if month:
-        conds.append("month = ?"); params.append(month)
+    if week:
+        conds.append("week = ?"); params.append(week)
     if area:
         conds.append("COALESCE(NULLIF(area_name, ''), area) = ?"); params.append(area)
     where = ("WHERE " + " AND ".join(conds)) if conds else ""
 
     rows = conn.execute(f"""
-        SELECT month, area, area_name,
+        SELECT week, area, area_name,
                total_weekly_so, total_weekly_tc, total_weekly_rd,
                pct_so, pct_tc, pct_rd,
                ave_weekly_temp, ave_weekly_humid,
                total_weekly_est_so
         FROM weekly_summary {where}
-        ORDER BY month DESC
+        ORDER BY week DESC
     """, params).fetchall()
 
     areas = conn.execute(
@@ -311,11 +312,53 @@ def get_weekly_summary(month: str = None, area: str = None) -> dict:
     return result
 
 
+def get_monthly_summary(month: str = None, area: str = None) -> dict:
+    """
+    Return monthly summary data (per calendar month), cached for 1 hour.
+    If month is None, returns all monthly summaries (used for Monthly view).
+    Optional area filters by the friendly area_name (coordinate fallback).
+    Also returns the full distinct area list for the filter dropdown.
+    Rows ordered newest first — frontend uses row[0] as the 'latest' card.
+    """
+    key = _cache_key({"type": "monthly", "month": month or "", "area": area or ""})
+    if key in _monthly_cache:
+        return _monthly_cache[key]
+
+    conn = get_connection()
+    conds, params = [], []
+    if month:
+        conds.append("month = ?"); params.append(month)
+    if area:
+        conds.append("COALESCE(NULLIF(area_name, ''), area) = ?"); params.append(area)
+    where = ("WHERE " + " AND ".join(conds)) if conds else ""
+
+    rows = conn.execute(f"""
+        SELECT month, area, area_name,
+               total_monthly_so, total_monthly_tc, total_monthly_rd,
+               pct_so, pct_tc, pct_rd,
+               ave_monthly_temp, ave_monthly_humid,
+               total_monthly_est_so
+        FROM monthly_summary {where}
+        ORDER BY month DESC
+    """, params).fetchall()
+
+    areas = conn.execute(
+        "SELECT DISTINCT COALESCE(NULLIF(area_name, ''), area) AS name "
+        "FROM monthly_summary ORDER BY name"
+    ).fetchall()
+    conn.close()
+
+    result = {"monthly": [dict(r) for r in rows], "areas": [a[0] for a in areas]}
+    _monthly_cache[key] = result
+    return result
+
+
 def get_insect_data(period: str, insect: str, area: str = "") -> dict:
     """
     Query detections filtered by insect type and period window.
     Period window:
         latest  — last 24 hours
+        daily   — today (calendar date)
         weekly  — last 7 days rolling
         monthly — current calendar month
     Always queries detections table (summary tables have no per-insect rows).
@@ -333,6 +376,9 @@ def get_insect_data(period: str, insect: str, area: str = "") -> dict:
         cutoff = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
         conditions.append("(date || ' ' || time) >= ?")
         params.append(cutoff)
+    elif period == "daily":
+        conditions.append("date = ?")
+        params.append(datetime.now().strftime("%Y-%m-%d"))
     elif period == "weekly":
         cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
         conditions.append("date >= ?")
@@ -364,4 +410,5 @@ def invalidate_cache():
     _query_cache.clear()
     _daily_cache.clear()
     _weekly_cache.clear()
+    _monthly_cache.clear()
     _insect_cache.clear()
